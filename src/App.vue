@@ -1,27 +1,39 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+  <div class="container">
+    <div class="row">
+      <nav class="navbar navbar-dark" style="background-color: #e3f2fd;">
+        <h2>Traffic Show</h2>
+      </nav>
+    </div>
+    <br>
+    <div class="row">
+      <div class="col">
+        <Control />
+      </div>
+      <div class="col-6">
+        <TrafficMap />
+      </div>
+      <div class="col">
+        <Display />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import HelloWorld from './components/HelloWorld.vue'
+import TrafficMap from './components/TrafficMap.vue'
+import Display from './components/Display.vue'
+import Control from './components/Control.vue'
+import 'bootstrap'
+import 'bootstrap/dist/css/bootstrap.min.css'
 
 export default defineComponent({
   name: 'App',
   components: {
-    HelloWorld
+    TrafficMap,
+    Display,
+    Control
   }
 })
 </script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
