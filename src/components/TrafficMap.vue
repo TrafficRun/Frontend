@@ -5,20 +5,22 @@
 <script>
 import * as echarts from 'echarts'
 import 'echarts/extension/bmap/bmap'
-import gcoord from 'gcoord'
 import { defineComponent } from 'vue'
+import streets from '../data/street_manhattan.json'
+
+// let streets = {}
 
 export default defineComponent({
   name: 'TrafficMap',
   data: () => {
     return {
-      simplePoints: [],
+      streetPath: [],
       chartOption: {
         animation: false,
         bmap: {
           center: [-73.96423175103598, 40.78055665558648],
           zoom: 13,
-          roam: false,
+          roam: true,
           mapStyleV2: {
             styleId: 'daec037e78e517014e8b5ff369cb3892'
           }
@@ -32,8 +34,8 @@ export default defineComponent({
             silent: true,
             lineStyle: {
               color: 'rgb(200, 35, 45)',
-              opacity: 0.2,
-              width: 3
+              opacity: 2,
+              width: 1
             },
             progressiveThreshold: 500,
             progressive: 200
@@ -46,7 +48,28 @@ export default defineComponent({
   mounted () {
     const myChart = this.$refs.myChart
     const chartModel = echarts.init(myChart)
+    this.init_street()
+    console.log(this.streetPath.length)
+    this.chartOption.series[0].data = this.streetPath
     chartModel.setOption(this.chartOption)
+  },
+  methods: {
+    init_street () {
+      console.log(streets.features.length)
+      streets.features.forEach((value) => {
+        if (value.geometry.type !== 'MultiLineString') {
+          this.streetPath.push({
+            coords: value.geometry.coordinates
+          })
+        } else {
+          value.geometry.coordinates.forEach((tvalue) => {
+            this.streetPath.push({
+              coords: tvalue
+            })
+          })
+        }
+      })
+    }
   }
 })
 </script>
