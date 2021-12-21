@@ -7,6 +7,7 @@ import * as echarts from 'echarts'
 import 'echarts/extension/bmap/bmap'
 import { defineComponent } from 'vue'
 import streets from '../data/street_manhattan.json'
+import points from '../data/points.json'
 
 // let streets = {}
 
@@ -33,12 +34,19 @@ export default defineComponent({
             data: [],
             silent: true,
             lineStyle: {
-              color: 'rgb(200, 35, 45)',
-              opacity: 2,
+              color: '#3366CC',
+              opacity: 0.2,
               width: 1
             },
             progressiveThreshold: 500,
             progressive: 200
+          },
+          {
+            type: 'scatter',
+            coordinateSystem: 'bmap',
+            symbol: 'circle',
+            symbolSize: 5,
+            data: []
           }
         ]
       },
@@ -51,6 +59,7 @@ export default defineComponent({
     this.init_street()
     console.log(this.streetPath.length)
     this.chartOption.series[0].data = this.streetPath
+    this.chartOption.series[1].data = points
     chartModel.setOption(this.chartOption)
   },
   methods: {
