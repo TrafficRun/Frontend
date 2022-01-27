@@ -2,20 +2,23 @@
   <div class="map" ref="myChart" id="myChart"></div>
 </template>
 
-<script>
+<script lang="ts">
 import * as echarts from 'echarts'
 import 'echarts/extension/bmap/bmap'
 import { defineComponent } from 'vue'
-import streets from '../data/street_manhattan.json'
-import points from '../data/points.json'
+import { ManhattanRun } from '../traffic/manhattan'
 
-// let streets = {}
+interface lineInterface {
+  coords: Array<Array<number>>
+}
+
+let chartModel : echarts.ECharts = null as unknown as echarts.ECharts
 
 export default defineComponent({
   name: 'TrafficMap',
   data: () => {
     return {
-      streetPath: [],
+      streetPath: [] as Array<lineInterface>,
       chartOption: {
         animation: false,
         bmap: {
@@ -31,7 +34,7 @@ export default defineComponent({
             type: 'lines',
             coordinateSystem: 'bmap',
             polyline: true,
-            data: [],
+            data: [] as Array<lineInterface>,
             silent: true,
             lineStyle: {
               color: '#3366CC',
@@ -40,44 +43,59 @@ export default defineComponent({
             },
             progressiveThreshold: 500,
             progressive: 200
-          },
-          {
+          }, {
             type: 'scatter',
             coordinateSystem: 'bmap',
             symbol: 'circle',
             symbolSize: 5,
-            data: []
+            data: [] as Array<Array<number>>,
+            itemStyle: {
+              color: '#ddb926'
+            }
           }
         ]
       },
-      lines: []
+      lines: [],
+      passengers: [] as Array<Array<number>>,
+      nowTime: 0,
+      runHandler: 0
     }
   },
   mounted () {
-    const myChart = this.$refs.myChart
-    const chartModel = echarts.init(myChart)
-    this.init_street()
-    console.log(this.streetPath.length)
-    this.chartOption.series[0].data = this.streetPath
-    this.chartOption.series[1].data = points
+    if (this.runHandler !== 0) clearInterval(this.runHandler)
+    const myChart = this.$refs.myChart as HTMLElement
+    chartModel = echarts.init(myChart)
+    // 清除道路初始化
+    // this.init_street()
+    // this.chartOption.series[0].data = this.streetPath
+    this.chartOption.series[1].data = this.passengers
     chartModel.setOption(this.chartOption)
+    this.runHandler = setInterval(this.run, 1000)
   },
   methods: {
     init_street () {
-      console.log(streets.features.length)
-      streets.features.forEach((value) => {
-        if (value.geometry.type !== 'MultiLineString') {
-          this.streetPath.push({
-            coords: value.geometry.coordinates
-          })
-        } else {
-          value.geometry.coordinates.forEach((tvalue) => {
-            this.streetPath.push({
-              coords: tvalue
-            })
-          })
-        }
+      ManhattanRun.getLines().forEach((lineItem) => {
+        this.streetPath.push({
+          coords: lineItem
+        })
       })
+    },
+    run () {
+      // 更新服务点
+      if (this.nowTime >= ManhattanRun.getTimeStep()) {
+        clearInterval(this.runHandler)
+        return 0
+      }
+      this.passengers.splice(0, this.passengers.length)
+      ManhattanRun.getRequests(this.nowTime).forEach((item) => {
+        this.passengers.push(item)
+      })
+      console.log(this.passengers.length)
+      this.nowTime += 1
+      chartModel.setOption({
+        series: this.chartOption.series
+      })
+      return 0
     }
   }
 })
