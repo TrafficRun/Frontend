@@ -12,6 +12,15 @@ interface lineInterface {
   coords: Array<Array<number>>
 }
 
+interface pathInterface {
+  effect: {
+    period: number
+  }
+  coords: Array<Array<number>>
+}
+
+const stepTime = 10
+
 let chartModel : echarts.ECharts = null as unknown as echarts.ECharts
 
 export default defineComponent({
@@ -52,33 +61,53 @@ export default defineComponent({
             itemStyle: {
               color: '#ddb926'
             }
+          }, {
+            name: 'Route',
+            type: 'lines',
+            coordinateSystem: 'bmap',
+            polyline: true,
+            lineStyle: {
+              width: 0
+            },
+            effect: {
+              show: true,
+              symbolSize: 5,
+              symbol: 'circle',
+              color: '#ffff00'
+            },
+            data: [] as Array<pathInterface>
           }
         ]
       },
       lines: [],
       passengers: [] as Array<Array<number>>,
       nowTime: 0,
-      runHandler: 0
+      runHandler: 0,
+      agentPath: [] as Array<pathInterface>
     }
   },
   mounted () {
     if (this.runHandler !== 0) clearInterval(this.runHandler)
+    this.init_graph()
     const myChart = this.$refs.myChart as HTMLElement
     chartModel = echarts.init(myChart)
     // 清除道路初始化
-    // this.init_street()
-    // this.chartOption.series[0].data = this.streetPath
     this.chartOption.series[1].data = this.passengers
+    this.chartOption.series[2].data = this.agentPath
     chartModel.setOption(this.chartOption)
-    this.runHandler = setInterval(this.run, 1000)
+    this.runHandler = setInterval(this.run, stepTime * 1000)
   },
   methods: {
-    init_street () {
-      ManhattanRun.getLines().forEach((lineItem) => {
-        this.streetPath.push({
-          coords: lineItem
+    init_graph () {
+      const agentNumber = ManhattanRun.getAgentNumber()
+      for (let loopAgent = 0; loopAgent < agentNumber; ++loopAgent) {
+        this.agentPath.push({
+          effect: {
+            period: 0
+          },
+          coords: [[0, 0], [0, 0]]
         })
-      })
+      }
     },
     run () {
       // 更新服务点
@@ -90,8 +119,21 @@ export default defineComponent({
       ManhattanRun.getRequests(this.nowTime).forEach((item) => {
         this.passengers.push(item)
       })
-      console.log(this.passengers.length)
+
+      // 更新路径
+      const nowAgentPath = ManhattanRun.getPath(this.nowTime)
+      nowAgentPath.forEach((item, index) => {
+        if (item.period === -1) return
+        if (item.path === []) {
+          console.log(index)
+          return
+        }
+        this.agentPath[index].coords = item.path
+        this.agentPath[index].effect.period = item.period * stepTime
+      })
+
       this.nowTime += 1
+      console.log(this.chartOption.series)
       chartModel.setOption({
         series: this.chartOption.series
       })
