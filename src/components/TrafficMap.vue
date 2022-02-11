@@ -7,6 +7,7 @@ import * as echarts from 'echarts'
 import 'echarts/extension/bmap/bmap'
 import { defineComponent } from 'vue'
 import { ManhattanRun } from '../traffic/manhattan'
+import store from '@/store'
 
 interface lineInterface {
   coords: Array<Array<number>>
@@ -20,6 +21,7 @@ interface pathInterface {
 }
 
 const stepTime = 10
+const driversBatchSize = 1000
 
 let chartModel : echarts.ECharts = null as unknown as echarts.ECharts
 
@@ -56,52 +58,66 @@ export default defineComponent({
             type: 'scatter',
             coordinateSystem: 'bmap',
             symbol: 'circle',
-            symbolSize: 5,
+            symbolSize: 2,
             data: [] as Array<Array<number>>,
             itemStyle: {
               color: '#ddb926'
-            }
-          }, {
-            name: 'Route',
-            type: 'lines',
-            coordinateSystem: 'bmap',
-            polyline: true,
-            lineStyle: {
-              width: 0
             },
-            effect: {
-              show: true,
-              symbolSize: 5,
-              symbol: 'circle',
-              color: '#ffff00'
-            },
-            data: [] as Array<pathInterface>
+            z: 2
           }
-        ]
+        ] as Array<any>
       },
       lines: [],
       passengers: [] as Array<Array<number>>,
       nowTime: 0,
       runHandler: 0,
-      agentPath: [] as Array<pathInterface>
+      agentPath: [] as Array<Array<pathInterface>>
     }
   },
   mounted () {
     if (this.runHandler !== 0) clearInterval(this.runHandler)
-    this.init_graph()
     const myChart = this.$refs.myChart as HTMLElement
     chartModel = echarts.init(myChart)
-    // 清除道路初始化
+    const batchNumber = Math.ceil(ManhattanRun.getAgentNumber() / driversBatchSize)
+    for (let loopDriverBatch = 0; loopDriverBatch < batchNumber; ++loopDriverBatch) {
+      const tagentPath = [] as Array<pathInterface>
+      this.agentPath.push(tagentPath)
+      this.chartOption.series.push({
+        name: 'Route',
+        type: 'lines',
+        coordinateSystem: 'bmap',
+        polyline: true,
+        lineStyle: {
+          width: 0
+        },
+        effect: {
+          show: true,
+          symbolSize: 2,
+          symbol: 'circle',
+          color: '#ffff00',
+          trailLength: 0,
+          loop: true
+        },
+        data: tagentPath,
+        animation: false,
+        z: 1,
+        progressive: 0,
+        progressiveThreshold: 10000,
+        silent: true
+      })
+    }
     this.chartOption.series[1].data = this.passengers
-    this.chartOption.series[2].data = this.agentPath
+    this.init_graph()
     chartModel.setOption(this.chartOption)
-    this.runHandler = setInterval(this.run, stepTime * 1000)
+    store.commit('setSumTimeStep', 96)
+    this.runHandler = setInterval(this.fake_run, stepTime * 1000)
   },
   methods: {
     init_graph () {
       const agentNumber = ManhattanRun.getAgentNumber()
       for (let loopAgent = 0; loopAgent < agentNumber; ++loopAgent) {
-        this.agentPath.push({
+        const batchIndex = Math.floor(loopAgent / driversBatchSize)
+        this.agentPath[batchIndex].push({
           effect: {
             period: 0
           },
@@ -123,21 +139,38 @@ export default defineComponent({
       // 更新路径
       const nowAgentPath = ManhattanRun.getPath(this.nowTime)
       nowAgentPath.forEach((item, index) => {
-        if (item.period === -1) return
-        if (item.path === []) {
-          console.log(index)
+        const batchIndex = Math.floor(index / driversBatchSize)
+        const batchInIndex = index % driversBatchSize
+        if (item.period === -1) {
+          if (this.nowTime === ManhattanRun.getTimeStep() - 1) {
+            this.agentPath[batchIndex][batchInIndex].coords = [
+              this.agentPath[batchIndex][batchInIndex].coords[this.agentPath[batchIndex][batchInIndex].coords.length - 1],
+              this.agentPath[batchIndex][batchInIndex].coords[this.agentPath[batchIndex][batchInIndex].coords.length - 1]
+            ]
+            this.agentPath[batchIndex][batchInIndex].effect.period = stepTime
+          }
           return
         }
-        this.agentPath[index].coords = item.path
-        this.agentPath[index].effect.period = item.period * stepTime
+        if (item.path.length === 1) {
+          this.agentPath[batchIndex][batchInIndex].coords = [item.path[0], item.path[0]]
+        } else {
+          this.agentPath[batchIndex][batchInIndex].coords = item.path
+        }
+        this.agentPath[batchIndex][batchInIndex].effect.period = item.period * stepTime
       })
 
       this.nowTime += 1
-      console.log(this.chartOption.series)
       chartModel.setOption({
         series: this.chartOption.series
       })
       return 0
+    },
+    fake_run () {
+      if (store.state.timeStep >= 96) {
+        clearInterval(this.runHandler)
+        return 0
+      }
+      store.commit('increaseTimeStep')
     }
   }
 })
