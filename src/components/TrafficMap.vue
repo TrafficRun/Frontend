@@ -69,13 +69,12 @@ export default defineComponent({
       },
       lines: [],
       passengers: [] as Array<Array<number>>,
-      nowTime: 0,
-      runHandler: 0,
+      runHandler: null as NodeJS.Timer | null,
       agentPath: [] as Array<Array<pathInterface>>
     }
   },
   mounted () {
-    if (this.runHandler !== 0) clearInterval(this.runHandler)
+    if (this.runHandler !== null) clearInterval(this.runHandler)
     const myChart = this.$refs.myChart as HTMLElement
     chartModel = echarts.init(myChart)
     const batchNumber = Math.ceil(ManhattanRun.getAgentNumber() / driversBatchSize)
@@ -109,8 +108,8 @@ export default defineComponent({
     this.chartOption.series[1].data = this.passengers
     this.init_graph()
     chartModel.setOption(this.chartOption)
-    store.commit('setSumTimeStep', 96)
-    this.runHandler = setInterval(this.fake_run, stepTime * 1000)
+    store.commit('setSumTimeStep', ManhattanRun.getTimeStep())
+    this.runHandler = setInterval(this.run, stepTime * 1000)
   },
   methods: {
     init_graph () {
@@ -127,22 +126,24 @@ export default defineComponent({
     },
     run () {
       // 更新服务点
-      if (this.nowTime >= ManhattanRun.getTimeStep()) {
-        clearInterval(this.runHandler)
+      if (this.timeStep >= ManhattanRun.getTimeStep()) {
+        if (this.runHandler !== null) {
+          clearInterval(this.runHandler)
+        }
         return 0
       }
       this.passengers.splice(0, this.passengers.length)
-      ManhattanRun.getRequests(this.nowTime).forEach((item) => {
+      ManhattanRun.getRequests(this.timeStep).forEach((item) => {
         this.passengers.push(item)
       })
 
       // 更新路径
-      const nowAgentPath = ManhattanRun.getPath(this.nowTime)
+      const nowAgentPath = ManhattanRun.getPath(this.timeStep)
       nowAgentPath.forEach((item, index) => {
         const batchIndex = Math.floor(index / driversBatchSize)
         const batchInIndex = index % driversBatchSize
         if (item.period === -1) {
-          if (this.nowTime === ManhattanRun.getTimeStep() - 1) {
+          if (this.timeStep === ManhattanRun.getTimeStep() - 1) {
             this.agentPath[batchIndex][batchInIndex].coords = [
               this.agentPath[batchIndex][batchInIndex].coords[this.agentPath[batchIndex][batchInIndex].coords.length - 1],
               this.agentPath[batchIndex][batchInIndex].coords[this.agentPath[batchIndex][batchInIndex].coords.length - 1]
@@ -159,7 +160,7 @@ export default defineComponent({
         this.agentPath[batchIndex][batchInIndex].effect.period = item.period * stepTime
       })
 
-      this.nowTime += 1
+      store.commit('increaseTimeStep')
       chartModel.setOption({
         series: this.chartOption.series
       })
@@ -167,10 +168,17 @@ export default defineComponent({
     },
     fake_run () {
       if (store.state.timeStep >= 96) {
-        clearInterval(this.runHandler)
+        if (this.runHandler !== null) {
+          clearInterval(this.runHandler)
+        }
         return 0
       }
       store.commit('increaseTimeStep')
+    }
+  },
+  computed: {
+    timeStep: function () {
+      return store.state.timeStep
     }
   }
 })

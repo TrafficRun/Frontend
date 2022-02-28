@@ -1,39 +1,53 @@
 <template>
-  <div class="container">
-    <div class="row">
-      <nav class="navbar navbar-dark" style="background-color: #e3f2fd;">
-        <h2>Traffic Show</h2>
-      </nav>
-    </div>
-    <br>
-    <div class="row">
-      <div class="col">
-        <Control />
-      </div>
-      <div class="col-6">
-        <TrafficMap />
-      </div>
-      <div class="col">
-        <Display />
-      </div>
-    </div>
+  <div class="comm-layout">
+    <el-container>
+      <el-header class="header-board">
+        <h3>Traffic Map</h3>
+      </el-header>
+      <el-container class="main-container">
+        <el-aside width="300px" class="my-container">
+          <Control />
+        </el-aside>
+        <el-main class="my-container map-container">
+          <GridMap />
+        </el-main>
+        <el-aside width="300px" class="my-container">
+          <Display />
+        </el-aside>
+      </el-container>
+    </el-container>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import TrafficMap from './components/TrafficMap.vue'
+// import TrafficMap from './components/TrafficMap.vue'
+import GridMap from './components/GridMap.vue'
 import Display from './components/Display.vue'
 import Control from './components/Control.vue'
-import 'bootstrap'
-import 'bootstrap/dist/css/bootstrap.min.css'
 
 export default defineComponent({
   name: 'App',
   components: {
-    TrafficMap,
+    GridMap,
     Display,
     Control
   }
 })
 </script>
+
+<style scoped>
+.header-board {
+  border-bottom: 1px solid var(--el-border-color-base);
+}
+.main-container {
+  padding-top: 20px;
+}
+.map-container {
+  border-left: 1px solid var(--el-border-color-base);
+  border-right: 1px solid var(--el-border-color-base);
+}
+.my-container {
+  padding: 10px;
+}
+</style>

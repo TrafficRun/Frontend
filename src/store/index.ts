@@ -2,13 +2,15 @@ import { createStore } from 'vuex'
 
 export interface State {
   timeStep: number,
-  sumTimeStep: number
+  sumTimeStep: number,
+  serverHost: string
 }
 
 export default createStore<State>({
   state: {
     timeStep: 0,
-    sumTimeStep: 0
+    sumTimeStep: 0,
+    serverHost: '127.0.0.1:53434'
   },
   mutations: {
     setSumTimeStep (state, n : number) {

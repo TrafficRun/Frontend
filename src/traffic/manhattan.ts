@@ -43,3 +43,4 @@ const fakeDrivePath : Array<Array<PathType<number>>> = []
 
 // export const ManhattanRun : RealModel<Array<number>> = new RealModel(formatStreets, points, requests, driveKeyPoint, drivePath)
 export const ManhattanRun : RealModel<Array<number>> = new RealModel(fakeformatStreets, fakePoints, fakeRequests, fakeDriveKeyPoint, fakeDrivePath)
+

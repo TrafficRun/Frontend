@@ -67,13 +67,3 @@ export default defineComponent({
   }
 })
 </script>
-
-<style scoped>
-.ink-display {
-  border-width: 1px;
-  border-color: aquamarine;
-  border-style: solid;
-  border-radius: 10px;
-  padding: 10px;
-}
-</style>
