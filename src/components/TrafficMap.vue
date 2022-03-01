@@ -69,7 +69,7 @@ export default defineComponent({
       },
       lines: [],
       passengers: [] as Array<Array<number>>,
-      runHandler: null as NodeJS.Timer | null,
+      runHandler: null as any,
       agentPath: [] as Array<Array<pathInterface>>
     }
   },

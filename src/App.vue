@@ -32,6 +32,7 @@ export default defineComponent({
     GridMap,
     Display,
     Control
+    // TrafficMap
   }
 })
 </script>
