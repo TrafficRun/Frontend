@@ -1,16 +1,19 @@
 import { createStore } from 'vuex'
+import { TrafficServer } from '@/network/server'
 
 export interface State {
   timeStep: number,
   sumTimeStep: number,
-  serverHost: string
+  serverHost: string,
+  server: TrafficServer | undefined
 }
 
 export default createStore<State>({
   state: {
     timeStep: 0,
     sumTimeStep: 0,
-    serverHost: '127.0.0.1:53434'
+    serverHost: '127.0.0.1:53434',
+    server: undefined
   },
   mutations: {
     setSumTimeStep (state, n : number) {
@@ -18,6 +21,10 @@ export default createStore<State>({
     },
     increaseTimeStep (state) {
       state.timeStep++
+    },
+    setServerHost (state, serverHost: string) {
+      state.serverHost = serverHost
+      state.server = new TrafficServer(serverHost)
     }
   },
   actions: {

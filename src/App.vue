@@ -21,10 +21,11 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-// import TrafficMap from './components/TrafficMap.vue'
 import GridMap from './components/GridMap.vue'
 import Display from './components/Display.vue'
 import Control from './components/Control.vue'
+import { ElMessageBox, Action } from 'element-plus'
+import store from '@/store/index'
 
 export default defineComponent({
   name: 'App',
@@ -32,7 +33,23 @@ export default defineComponent({
     GridMap,
     Display,
     Control
-    // TrafficMap
+  },
+  mounted () {
+    this.openMessage()
+  },
+  methods: {
+    openMessage () {
+      ElMessageBox.prompt('请输入后端服务器IP和端口，如：127.0.0.1:8080', 'Tip', {
+        confirmButtonText: 'OK',
+        showCancelButton: false
+      }).then(({ value }) => {
+        store.commit('setServerHost', value)
+      }).catch((action: Action) => {
+        if (action === 'cancel') {
+          this.openMessage()
+        }
+      })
+    }
   }
 })
 </script>

@@ -31,10 +31,9 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { ParameterItemInterface, TrafficServer, getParameterDefaultValue } from '@/network/server'
+import store from '@/store'
+import { ParameterItemInterface, TrafficServer } from '@/network/server'
 import ControlItem from './ControlItem.vue'
-
-const trafficServer : TrafficServer = new TrafficServer('t340-1.ink19.cn:53434')
 
 interface ExtConfigType {
   name: string,
@@ -56,18 +55,7 @@ export default defineComponent({
     }
   },
   mounted () {
-    trafficServer.getCommConfig().then((result) => {
-      if (result !== null) {
-        this.global = result.global
-        this.env = result.env
-        this.modelParameterIndex = this.global.findIndex((value) => {
-          return value.name === 'model_name'
-        })
-        this.generatorParameterIndex = this.global.findIndex((value) => {
-          return value.name === 'generator_name'
-        })
-      }
-    })
+    this.getCommConfig()
   },
   computed: {
     modelName () : string {
@@ -77,11 +65,14 @@ export default defineComponent({
     generatorName (): string {
       if (this.global.length === 0) return ''
       return this.global[this.generatorParameterIndex].default_value
+    },
+    server () {
+      return store.state.server
     }
   },
   watch: {
     modelName (newName : string, oldName : string) {
-      trafficServer.getModelConfig(newName).then((value) => {
+      this.server!.getModelConfig(newName).then((value) => {
         if (value !== null) {
           const modelIndex = this.extConfig.findIndex((value) => {
             return value.name === oldName
@@ -101,7 +92,7 @@ export default defineComponent({
       })
     },
     generatorName (newName : string, oldName : string) {
-      trafficServer.getGeneratorConfig(newName).then((value) => {
+      this.server!.getGeneratorConfig(newName).then((value) => {
         if (value !== null) {
           const generatorIndex = this.extConfig.findIndex((value) => {
             return value.name === oldName
@@ -119,11 +110,34 @@ export default defineComponent({
           }
         }
       })
+    },
+    server (newVal : TrafficServer | undefined, oldVal : TrafficServer | undefined) {
+      if (newVal === undefined) {
+        return
+      }
+      this.getCommConfig()
     }
   },
   methods: {
     runTraffic () {
       console.log('Begin Run')
+    },
+    getCommConfig () {
+      if (this.server === undefined) {
+        return
+      }
+      this.server.getCommConfig().then((result) => {
+        if (result !== null) {
+          this.global = result.global
+          this.env = result.env
+          this.modelParameterIndex = this.global.findIndex((value) => {
+            return value.name === 'model_name'
+          })
+          this.generatorParameterIndex = this.global.findIndex((value) => {
+            return value.name === 'generator_name'
+          })
+        }
+      })
     }
   }
 })
