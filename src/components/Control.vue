@@ -26,14 +26,17 @@
       </el-collapse-item>
     </el-collapse>
     <el-divider></el-divider>
-    <el-button type="primary" @click="runTraffic">运行</el-button>
+    <el-button type="primary" @click="runTraffic" :loading="runButtonLoading">运行</el-button>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import store from '@/store'
-import { ParameterItemInterface, TrafficServer } from '@/network/server'
+import { ParameterItemInterface, TrafficServer, SetResultParameterInterface } from '@/network/server'
 import ControlItem from './ControlItem.vue'
+import { ElMessageBox } from 'element-plus'
+
+const requestInterval = 1000
 
 interface ExtConfigType {
   name: string,
@@ -51,7 +54,10 @@ export default defineComponent({
       env: [] as ParameterItemInterface[],
       extConfig: [] as ExtConfigType[],
       modelParameterIndex: 0 as number,
-      generatorParameterIndex: 0 as number
+      generatorParameterIndex: 0 as number,
+      runButtonLoading: false,
+      requestTime: 0,
+      getResultRetry: 0
     }
   },
   mounted () {
@@ -68,6 +74,12 @@ export default defineComponent({
     },
     server () {
       return store.state.server
+    },
+    sumTimeStep () : number {
+      return store.state.gameSetting.sumTimeStep
+    },
+    token () : string {
+      return store.state.gameSetting.token
     }
   },
   watch: {
@@ -120,7 +132,55 @@ export default defineComponent({
   },
   methods: {
     runTraffic () {
-      console.log('Begin Run')
+      this.runButtonLoading = true
+      const setResultParameter : SetResultParameterInterface = {}
+      this.global.forEach((value) => {
+        setResultParameter[value.name] = value.default_value
+      })
+      this.env.forEach((value) => {
+        setResultParameter[value.name] = value.default_value
+      })
+      this.extConfig.forEach((extValue) => {
+        extValue.parameters.forEach((value) => {
+          setResultParameter[value.name] = value.default_value
+        })
+      })
+      this.server!.setBegin(setResultParameter).then((value) => {
+        if (value !== null) {
+          store.commit('gameSetting', value)
+          setTimeout(this.requestResult, requestInterval)
+        } else {
+          ElMessageBox.alert('出现错误', 'Error', {
+            confirmButtonText: 'OK'
+          })
+        }
+      }).catch((reason) => {
+        ElMessageBox.alert(reason, 'Error', {
+          confirmButtonText: 'OK'
+        })
+      }).finally(() => {
+        this.runButtonLoading = false
+      })
+    },
+    requestResult () {
+      this.server!.getResult(this.token, this.requestTime).then((value) => {
+        this.getResultRetry = 0
+        if (value !== null) {
+          this.requestTime += 1
+          store.commit('addSnapShot', value)
+        }
+      }).catch((reason) => {
+        this.getResultRetry++
+        if (this.getResultRetry >= 3) {
+          ElMessageBox.alert('网络失败次数达到上限，原因：' + reason, 'Error', {
+            confirmButtonText: 'OK'
+          })
+        }
+      }).finally(() => {
+        if (this.requestTime < this.sumTimeStep && this.getResultRetry < 3) {
+          setTimeout(this.requestResult, requestInterval)
+        }
+      })
     },
     getCommConfig () {
       if (this.server === undefined) {

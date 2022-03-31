@@ -27,7 +27,7 @@ export default defineComponent({
         },
         yAxis: {},
         series: [{
-          data: [] as number[][],
+          data: [[1, 2], [2, 3], [3, 4]] as number[][],
           type: 'line'
         }],
         grid: {
@@ -42,13 +42,13 @@ export default defineComponent({
   mounted () {
     const chartDom = this.$refs.serverRatio as HTMLElement
     mySuccessChart = echarts.init(chartDom)
-    this.myOption.series[0].data = this.successData
-    this.myOption.xAxis.max = this.sumTimeStep
+    // this.myOption.series[0].data = this.successData
+    this.myOption.xAxis.max = 24
     mySuccessChart.setOption(this.myOption)
   },
   computed: {
     sumTimeStep () {
-      return store.state.sumTimeStep
+      return store.state.gameSetting.sumTimeStep
     },
     timeStep () {
       return store.state.timeStep

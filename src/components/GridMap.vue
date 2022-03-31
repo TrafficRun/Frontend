@@ -6,34 +6,51 @@
 
 <script lang="ts">
 import { GridDraw } from '@/grid/grid'
+import store, { GameSettingInterface } from '@/store'
 import { defineComponent } from 'vue'
+import { GameSnapshotInterface } from '@/network/server'
 
 let gridDraw: null | GridDraw = null
-
-const priorTime = 4
 
 export default defineComponent({
   name: 'GridMap',
   data () {
     return {}
   },
-  mounted () {
-    const drawCanvasContainer = this.$refs.gridmapcontainer as HTMLElement
-    const drawCanvas = this.$refs.gridmap as HTMLCanvasElement
-    drawCanvas.height = drawCanvasContainer.clientHeight
-    drawCanvas.width = drawCanvasContainer.clientWidth
-    console.log(drawCanvas.height, drawCanvas.width)
-    gridDraw = new GridDraw(drawCanvas)
-    gridDraw.setEnv(10, 10)
-    gridDraw.setAgentNumber(20)
-    gridDraw.render()
-    setInterval(this.run, priorTime * 1000)
-  },
   methods: {
-    run () {
+    createDraw (gameSetting : GameSettingInterface) {
+      const drawCanvasContainer = this.$refs.gridmapcontainer as HTMLElement
+      const drawCanvas = this.$refs.gridmap as HTMLCanvasElement
+      drawCanvas.height = drawCanvasContainer.clientHeight
+      drawCanvas.width = drawCanvasContainer.clientWidth
+      gridDraw = new GridDraw(drawCanvas)
+      gridDraw.setEnv(gameSetting.graph.height, gameSetting.graph.width)
+      gridDraw.setAgentNumber(gameSetting.agentNumber)
+      gridDraw.render()
+    }
+  },
+  computed: {
+    gameSetting () {
+      return store.state.gameSetting
+    },
+    snapshots () {
+      return store.state.snapshots
+    },
+    snapshotLen () {
+      return store.state.snapshots.length
+    }
+  },
+  watch: {
+    gameSetting (newVal : GameSettingInterface) {
       if (gridDraw !== null) {
-        gridDraw.setAgentPath()
+        gridDraw.stop()
       }
+      this.createDraw(newVal)
+    },
+    snapshotLen (newVal : number) {
+      store.state.snapshots.slice(gridDraw!.pathSetTime()).forEach((value) => {
+        gridDraw!.addSnapshots(value)
+      })
     }
   }
 })
