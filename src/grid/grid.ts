@@ -6,23 +6,6 @@ interface PositionInterface {
   left: number
 }
 
-// 节点接口类型
-interface NodeInterface {
-  // 节点的位置
-  position: PositionInterface,
-  // 节点的大小
-  nowReward: number,
-  // 收益数量列表
-  rewards: number[],
-  // 节点在图中的对象
-  obj: fabric.Circle
-}
-
-// 收益接口
-interface RewardInterface {
-  nodeIndex: number
-}
-
 // 路径接口
 interface PathInterface {
   period: number,
@@ -31,23 +14,263 @@ interface PathInterface {
   endNodeIndex: number
 }
 
-// 智能体的接口
-interface AgentInterface {
-  nowPosition: PositionInterface,
-  speed: PositionInterface,
-  actionLeftFrame: number,
-  nowIndex: number,
-  path: PathInterface[],
-  obj: fabric.Circle
-}
-
-interface TimePeriodControl {
-  nowPeriod: number,
-  maxPeriod: number,
-  leftFrame: number,
+interface TimeConfigInterface {
   fps: number,
   priorTime: number,
-  idle: boolean
+  waiteTime: number
+}
+
+// 中心时间控制
+class TimeControl {
+  private mNowPeriod = 0
+  private mMaxPeriod = 0
+  private mLeftFrame = 0
+  private mIsIdle = false
+
+  // 作为配置缓冲区，赋值时使用深拷贝，保证运行时不会出现问题
+  private timeConfig : TimeConfigInterface = {
+    fps: 0,
+    priorTime: 0,
+    waiteTime: 0
+  }
+
+  public constructor (timeConfig: TimeConfigInterface) {
+    Object.assign(this.timeConfig, timeConfig)
+  }
+
+  public idle () : boolean {
+    return this.mIsIdle
+  }
+
+  public now () : number {
+    return this.mNowPeriod
+  }
+
+  public maxPeriod () : number {
+    return this.mMaxPeriod
+  }
+
+  public leftFrame () : number {
+    return this.mLeftFrame
+  }
+
+  public addMax () : void {
+    this.mMaxPeriod += 1
+  }
+
+  public run (timeConfig: TimeConfigInterface) : void {
+    if (this.mLeftFrame <= 0) {
+      Object.assign(this.timeConfig, timeConfig)
+      if (this.mNowPeriod >= this.mMaxPeriod) {
+        // idel
+        this.mIsIdle = true
+        this.mLeftFrame = this.computeFrameNumber(this.timeConfig.waiteTime)
+      } else {
+        // run next Period
+        this.mIsIdle = false
+        this.mNowPeriod++
+        this.mLeftFrame = this.computeFrameNumber(this.timeConfig.priorTime)
+      }
+    }
+    this.mLeftFrame--
+  }
+
+  // 依据时间计算帧数
+  public computeFrameNumber (timeMs: number) : number {
+    return Math.ceil(timeMs / 1000 * this.timeConfig.fps)
+  }
+
+  // 时间配置
+  public config () : TimeConfigInterface {
+    return this.timeConfig
+  }
+}
+
+interface NodeConfigInterface {
+  maxSize: number,
+  minSize: number,
+  color: string
+}
+
+class Node {
+  private position: PositionInterface
+  private nowReward = 0
+  private rewards: number[] = []
+  private obj: fabric.Circle
+  private rewardToSize: (reward: number) => number
+  private timeControl: TimeControl
+  private nodeConfig: NodeConfigInterface = {
+    maxSize: 0,
+    minSize: 0,
+    color: ''
+  }
+
+  public constructor (position: PositionInterface, nodeConfig: NodeConfigInterface, sizeTrans: (reward: number) => number, timeControl: TimeControl) {
+    this.position = {
+      top: position.top,
+      left: position.left
+    }
+    Object.assign(this.nodeConfig, nodeConfig)
+    this.timeControl = timeControl
+    this.rewardToSize = sizeTrans
+    const reposiotion = this.reposition(position)
+    this.obj = new fabric.Circle({
+      left: reposiotion.left,
+      top: reposiotion.top,
+      fill: this.nodeConfig.color,
+      radius: this.rewardToSize(this.nowReward),
+      selectable: false,
+      evented: false
+    })
+  }
+
+  public run () {
+    if (this.timeControl.idle()) return
+    if (this.rewards[this.timeControl.now() - 1] !== this.nowReward) {
+      this.nowReward = this.rewards[this.timeControl.now() - 1]
+      this.obj.set('radius', this.rewardToSize(this.nowReward))
+      this.locate()
+    }
+  }
+
+  public locate () {
+    const reposiotion = this.reposition(this.position)
+    this.obj.set('top', reposiotion.top)
+    this.obj.set('left', reposiotion.left)
+  }
+
+  public getObject () : fabric.Circle {
+    return this.obj
+  }
+
+  public getPosition () : PositionInterface {
+    return this.position
+  }
+
+  private reposition (position: PositionInterface) : PositionInterface {
+    const result = {
+      left: position.left + this.nodeConfig.maxSize - this.rewardToSize(this.nowReward),
+      top: position.top + this.nodeConfig.maxSize - this.rewardToSize(this.nowReward)
+    }
+    return result
+  }
+
+  public addReward (reward : number) {
+    this.rewards.push(reward)
+  }
+}
+interface AgentConfigInterface {
+  // 计算智能体位置需要的信息
+  nodeMaxSize: number,
+  size: number,
+  color: string
+}
+
+class Agent {
+  private nowPosistion : PositionInterface = {
+    top: 0,
+    left: 0
+  }
+
+  private speed : PositionInterface = {
+    top: 0,
+    left: 0
+  }
+
+  private leftFrame = 0
+  private actionLeftPeriod = 0
+  private nowPathIndex = -1
+  private paths: PathInterface[] = []
+  private obj: fabric.Circle
+  private timeControl: TimeControl
+  private agentConfig: AgentConfigInterface = {
+    nodeMaxSize: 10,
+    size: 10,
+    color: '#73c0de'
+  }
+
+  private nodes: Node[]
+
+  public constructor (position: PositionInterface, agentConfig: AgentConfigInterface, timeControl: TimeControl, nodes: Node[]) {
+    this.timeControl = timeControl
+    this.nodes = nodes
+    Object.assign(this.agentConfig, agentConfig)
+    const reposiotion = this.reposiotion(position)
+    this.obj = new fabric.Circle({
+      top: reposiotion.top,
+      left: reposiotion.left,
+      fill: this.agentConfig.color,
+      radius: this.agentConfig.size,
+      selectable: false,
+      evented: false
+    })
+  }
+
+  public run () {
+    if (this.timeControl.idle()) return
+    if (this.leftFrame === 0) {
+      if (Math.abs(this.actionLeftPeriod) <= 1e-7) {
+        this.nowPathIndex++
+        const beginPosition = this.nodes[this.paths[this.nowPathIndex].beginNodeIndex].getPosition()
+        this.actionLeftPeriod = this.paths[this.nowPathIndex].period
+        this.nowPosistion.top = beginPosition.top
+        this.nowPosistion.left = beginPosition.left
+      }
+
+      const actionLeftFrame = this.timeControl.computeFrameNumber(this.actionLeftPeriod * this.timeControl.config().priorTime)
+      this.leftFrame = Math.min(actionLeftFrame, this.timeControl.leftFrame() + 1)
+
+      // 计算速度
+      const endPosition = this.nodes[this.paths[this.nowPathIndex].endNodeIndex].getPosition()
+      const disPos : PositionInterface = {
+        top: endPosition.top - this.nowPosistion.top,
+        left: endPosition.left - this.nowPosistion.left
+      }
+      this.speed = {
+        top: disPos.top / actionLeftFrame,
+        left: disPos.left / actionLeftFrame
+      }
+      this.actionLeftPeriod -= this.leftFrame * 1000 / (this.timeControl.config().priorTime * this.timeControl.config().fps)
+    }
+
+    // 移动
+    this.nowPosistion.top += this.speed.top
+    this.nowPosistion.left += this.speed.left
+    this.locate(this.nowPosistion)
+    this.leftFrame--
+  }
+
+  public locate (position : PositionInterface) : void {
+    if (position !== this.nowPosistion) {
+      this.nowPosistion.top = position.top
+      this.nowPosistion.left = position.left
+    }
+    const reposiotion = this.reposiotion(this.nowPosistion)
+    this.obj.set('top', reposiotion.top)
+    this.obj.set('left', reposiotion.left)
+  }
+
+  public getObject () : fabric.Circle {
+    return this.obj
+  }
+
+  public addPath (path: PathInterface) {
+    if (this.paths.length === 0) {
+      path.beginPeriod = 0
+    } else {
+      path.beginPeriod = this.paths[this.paths.length - 1].beginPeriod +
+        this.paths[this.paths.length - 1].period
+    }
+    this.paths.push(path)
+  }
+
+  private reposiotion (position : PositionInterface) : PositionInterface {
+    const result : PositionInterface = {
+      top: position.top + this.agentConfig.nodeMaxSize - this.agentConfig.size,
+      left: position.left + this.agentConfig.nodeMaxSize - this.agentConfig.size
+    }
+    return result
+  }
 }
 
 export class GridDraw {
@@ -59,41 +282,42 @@ export class GridDraw {
   private width = 0
   // 边的宽度
   private edgeWidth = 2
-  // 节点最大的大小
-  private nodeMaxSize = 10
-  // 节点最小大小
-  private nodeMinSize = 2
   // 边的颜色
   private edgeColor = '#bbb'
-  // 节点的颜色
-  private nodeColor = '#5470c6'
-  // 智能体的颜色
-  private agentColor = '#73c0de'
-  // 智能体的大小
-  private agentSize = 10
-  private nodes: NodeInterface[] = []
-  private agents: AgentInterface[] = []
-  private rewards: RewardInterface[][] = []
 
-  // draw Control
-  private minWaitTime = 300 // ms
-  private priorTime = 3000 // ms
-  private fps = 30
-  private isContinue = true
-
-  // 时间控制缓存区
-  private periodControl : TimePeriodControl = {
-    nowPeriod: 0,
-    maxPeriod: 0,
-    leftFrame: 0,
-    fps: this.fps,
-    priorTime: this.priorTime,
-    idle: false
+  // 节点配置
+  private nodeConfig : NodeConfigInterface = {
+    maxSize: 10,
+    minSize: 2,
+    color: '#5470c6'
   }
+
+  // 智能体配置
+  private agentConfig : AgentConfigInterface = {
+    size: 10,
+    color: '#73c0de',
+    nodeMaxSize: this.nodeConfig.maxSize
+  }
+
+  // 时间配置
+  private timeConfig : TimeConfigInterface = {
+    fps: 30,
+    priorTime: 3000,
+    waiteTime: 300
+  }
+
+  // 时间控制
+  private timeControl : TimeControl
+
+  private nodes: Node[] = []
+  private agents: Agent[] = []
+
+  private isContinue = true
 
   public constructor (dom: HTMLCanvasElement) {
     this.canvas = new fabric.Canvas(dom)
     this.canvas.selection = false
+    this.timeControl = new TimeControl(this.timeConfig)
   }
 
   public setEnv (height: number, width: number) : void {
@@ -109,15 +333,15 @@ export class GridDraw {
     const heightInterval = Math.floor(canvasHeight / this.height)
     const widthInterval = Math.floor(canvasWidth / this.width)
     const intervalPx = Math.min(heightInterval, widthInterval)
-    const heightBf = (canvasHeight - (intervalPx * (this.height - 1)) - 2 * this.nodeMaxSize) / 2
-    const widthBf = (canvasWidth - (intervalPx * (this.width - 1)) - 2 * this.nodeMaxSize) / 2
+    const heightBf = (canvasHeight - (intervalPx * (this.height - 1)) - 2 * this.nodeConfig.maxSize) / 2
+    const widthBf = (canvasWidth - (intervalPx * (this.width - 1)) - 2 * this.nodeConfig.maxSize) / 2
     // edge
     for (let loopHeight = 0; loopHeight < this.height; ++loopHeight) {
       for (let loopWidth = 0; loopWidth < this.width; ++loopWidth) {
         if (loopHeight !== 0) {
           const edge = new fabric.Line([
-            widthBf + intervalPx * loopWidth + this.nodeMaxSize - this.edgeWidth / 2, heightBf + intervalPx * loopHeight + this.nodeMaxSize,
-            widthBf + intervalPx * loopWidth + this.nodeMaxSize - this.edgeWidth / 2, heightBf + intervalPx * (loopHeight - 1) + this.nodeMaxSize
+            widthBf + intervalPx * loopWidth + this.nodeConfig.maxSize - this.edgeWidth / 2, heightBf + intervalPx * loopHeight + this.nodeConfig.maxSize,
+            widthBf + intervalPx * loopWidth + this.nodeConfig.maxSize - this.edgeWidth / 2, heightBf + intervalPx * (loopHeight - 1) + this.nodeConfig.maxSize
           ], {
             fill: this.edgeColor,
             stroke: this.edgeColor,
@@ -130,8 +354,8 @@ export class GridDraw {
 
         if (loopWidth !== 0) {
           const edge = new fabric.Line([
-            widthBf + intervalPx * loopWidth + this.nodeMaxSize, heightBf + intervalPx * loopHeight + this.nodeMaxSize - this.edgeWidth / 2,
-            widthBf + intervalPx * (loopWidth - 1) + this.nodeMaxSize, heightBf + intervalPx * (loopHeight) + this.nodeMaxSize - this.edgeWidth / 2
+            widthBf + intervalPx * loopWidth + this.nodeConfig.maxSize, heightBf + intervalPx * loopHeight + this.nodeConfig.maxSize - this.edgeWidth / 2,
+            widthBf + intervalPx * (loopWidth - 1) + this.nodeConfig.maxSize, heightBf + intervalPx * (loopHeight) + this.nodeConfig.maxSize - this.edgeWidth / 2
           ], {
             fill: this.edgeColor,
             stroke: this.edgeColor,
@@ -147,27 +371,14 @@ export class GridDraw {
     // node
     for (let loopHeight = 0; loopHeight < this.height; ++loopHeight) {
       for (let loopWidth = 0; loopWidth < this.width; ++loopWidth) {
-        const tempNode = {
-          position: {
-            left: widthBf + intervalPx * loopWidth,
-            top: heightBf + intervalPx * loopHeight
-          },
-          nowReward: 0,
-          obj: null as unknown as fabric.Circle,
-          rewards: []
-        } as NodeInterface
-        const node = new fabric.Circle({
-          left: tempNode.position.left + this.nodeMaxSize - (this.getNodeSize(tempNode.nowReward)),
-          top: tempNode.position.top + this.nodeMaxSize - (this.getNodeSize(tempNode.nowReward)),
-          fill: this.nodeColor,
-          radius: (this.getNodeSize(tempNode.nowReward)),
-          selectable: false,
-          evented: false
-        })
+        const nodePosiion : PositionInterface = {
+          left: widthBf + intervalPx * loopWidth,
+          top: heightBf + intervalPx * loopHeight
+        }
 
-        tempNode.obj = node
-        this.nodes.push(tempNode)
-        this.canvas.add(node)
+        const nodeObj = new Node(nodePosiion, this.nodeConfig, this.getNodeSize, this.timeControl)
+        this.canvas.add(nodeObj.getObject())
+        this.nodes.push(nodeObj)
       }
     }
   }
@@ -175,96 +386,24 @@ export class GridDraw {
   public setAgentNumber (agentNumber : number) : void {
     for (let loopAgent = 0; loopAgent < agentNumber; ++loopAgent) {
       const tempNodeIndex = 0
-      const tempAgent = {
-        nowIndex: 0,
-        path: [],
-        obj: null as unknown as fabric.Circle,
-        nowPosition: {
-          top: this.nodes[tempNodeIndex].position.top + this.nodeMaxSize - this.agentSize,
-          left: this.nodes[tempNodeIndex].position.left + this.nodeMaxSize - this.agentSize
-        },
-        speed: {
-          top: 0,
-          left: 0
-        },
-        actionLeftFrame: 0
-      } as AgentInterface
+      const agentPosiion : PositionInterface = {
+        top: this.nodes[tempNodeIndex].getPosition().top,
+        left: this.nodes[tempNodeIndex].getPosition().left
+      }
 
-      const agentObj = new fabric.Circle({
-        left: tempAgent.nowPosition.left,
-        top: tempAgent.nowPosition.top,
-        fill: this.agentColor,
-        radius: this.agentSize,
-        selectable: false,
-        evented: false
-      })
-
-      tempAgent.obj = agentObj
-      this.agents.push(tempAgent)
-      this.canvas.add(agentObj)
+      const agentObj = new Agent(agentPosiion, this.agentConfig, this.timeControl, this.nodes)
+      this.canvas.add(agentObj.getObject())
+      this.agents.push(agentObj)
     }
   }
 
   public run () : void {
-    if (this.periodControl.leftFrame === 0) {
-      if (this.periodControl.maxPeriod > this.periodControl.nowPeriod) {
-        this.periodControl.nowPeriod++
-        this.periodControl.leftFrame = this.priorTime / 1000 * this.fps
-        this.periodControl.idle = false
-        this.periodControl.fps = this.fps
-        this.periodControl.priorTime = this.priorTime
-      } else {
-        this.periodControl.leftFrame = this.minWaitTime / 1000 * this.fps
-        this.periodControl.idle = true
-      }
-    }
-    this.periodControl.leftFrame--
-
-    // 如果正在挂机状态，就不运行接下来的内容，使得整个状态处于冻结状态
-    if (this.periodControl.idle) return
-
-    this.agents.forEach((value, agentIndex) => {
-      if (value.actionLeftFrame <= 0) {
-        // 判断是否应该进入下一个路径
-        if (value.nowIndex < value.path.length && value.path[value.nowIndex].beginPeriod + value.path[value.nowIndex].period <= this.periodControl.nowPeriod - 1) {
-          value.nowIndex++
-          if (value.nowIndex > value.path.length) {
-            console.error('Something Error. agent index: ' + agentIndex + ', now index: ' + value.nowIndex + ', path len: ' + value.path.length)
-            return
-          } else {
-            const nextEdge = value.path[value.nowIndex]
-            const nowPosition = this.nodes[nextEdge.beginNodeIndex].position
-            value.nowPosition.left = nowPosition.left
-            value.nowPosition.top = nowPosition.top
-          }
-        }
-
-        const nextEdge = value.path[value.nowIndex]
-        const leftFrame = Math.floor(((nextEdge.beginPeriod + nextEdge.period) - this.periodControl.nowPeriod + 1) * this.periodControl.priorTime / 1000 * this.fps)
-        const countFrame = Math.min(leftFrame, this.periodControl.leftFrame + 1)
-        const lastPosition = this.nodes[nextEdge.beginNodeIndex].position
-        const nextPosition = this.nodes[nextEdge.endNodeIndex].position
-        value.actionLeftFrame = countFrame
-        value.speed = {
-          top: (nextPosition.top - lastPosition.top) / (nextEdge.period * this.periodControl.priorTime / 1000 * this.fps),
-          left: (nextPosition.left - lastPosition.left) / (nextEdge.period * this.periodControl.priorTime / 1000 * this.fps)
-        }
-      }
-      value.actionLeftFrame--
-      value.nowPosition.left += value.speed.left
-      value.nowPosition.top += value.speed.top
-      value.obj.set('top', value.nowPosition.top)
-      value.obj.set('left', value.nowPosition.left)
-      value.obj.setCoords()
+    this.timeControl.run(this.timeConfig)
+    this.agents.forEach((value) => {
+      value.run()
     })
-
     this.nodes.forEach((value) => {
-      if (value.rewards[this.periodControl.nowPeriod - 1] !== value.nowReward) {
-        value.nowReward = value.rewards[this.periodControl.nowPeriod - 1]
-        value.obj.set('radius', this.getNodeSize(value.nowReward))
-        value.obj.set('left', value.position.left + this.nodeMaxSize - (this.getNodeSize(value.nowReward)))
-        value.obj.set('top', value.position.top + this.nodeMaxSize - (this.getNodeSize(value.nowReward)))
-      }
+      value.run()
     })
   }
 
@@ -274,7 +413,7 @@ export class GridDraw {
         this.run()
         this.canvas.renderAll()
         this.render()
-      }, 1000 / this.fps)
+      }, 1000 / this.timeControl.config().fps)
     }
   }
 
@@ -283,49 +422,37 @@ export class GridDraw {
   }
 
   public addSnapshots (snapshot : GameSnapshotInterface) : void {
-    this.rewards.push(snapshot.rewards.map((value) => {
-      return {
-        nodeIndex: value
-      } as RewardInterface
-    }))
-
     // 添加智能体路径
     snapshot.agents.forEach((value) => {
-      const periodPerEdge = value.period / value.path.length
+      const periodPerEdge = value.period / (value.path.length - 1)
       value.path.forEach((pvalue, index) => {
         if (index === 0) return
-        let beginPeriod = 0
-        const pathLen = this.agents[value.agent_id].path.length
-        if (pathLen !== 0) {
-          beginPeriod = this.agents[value.agent_id].path[pathLen - 1].beginPeriod +
-            this.agents[value.agent_id].path[pathLen - 1].period
-        }
-        this.agents[value.agent_id].path.push({
+        this.agents[value.agent_id].addPath({
           beginNodeIndex: value.path[index - 1],
           endNodeIndex: pvalue,
           period: periodPerEdge,
-          beginPeriod: beginPeriod
+          beginPeriod: 0
         } as PathInterface)
       })
     })
 
     // 添加节点收益
     this.nodes.forEach((pvalue, index) => {
-      pvalue.rewards.push(
+      pvalue.addReward(
         snapshot.rewards.filter((value) => {
           return value === index
         }).length
       )
     })
 
-    this.periodControl.maxPeriod += 1
+    this.timeControl.addMax()
   }
 
   public pathSetTime () : number {
-    return this.rewards.length
+    return this.timeControl.maxPeriod()
   }
 
   private getNodeSize (reward : number) {
-    return this.nodeMinSize + (this.nodeMaxSize - this.nodeMinSize) * (2 / (1 + Math.exp(-reward)) - 1)
+    return this.nodeConfig.minSize + (this.nodeConfig.maxSize - this.nodeConfig.minSize) * (2 / (1 + Math.exp(-reward)) - 1)
   }
 }
