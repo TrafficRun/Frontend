@@ -11,7 +11,9 @@ interface NodeInterface {
   // 节点的位置
   position: PositionInterface,
   // 节点的大小
-  size: number,
+  nowReward: number,
+  // 收益数量列表
+  rewards: number[],
   // 节点在图中的对象
   obj: fabric.Circle
 }
@@ -24,6 +26,7 @@ interface RewardInterface {
 // 路径接口
 interface PathInterface {
   period: number,
+  beginPeriod: number,
   beginNodeIndex: number,
   endNodeIndex: number
 }
@@ -38,6 +41,15 @@ interface AgentInterface {
   obj: fabric.Circle
 }
 
+interface TimePeriodControl {
+  nowPeriod: number,
+  maxPeriod: number,
+  leftFrame: number,
+  fps: number,
+  priorTime: number,
+  idle: boolean
+}
+
 export class GridDraw {
   // 画布
   private canvas : fabric.Canvas
@@ -49,6 +61,8 @@ export class GridDraw {
   private edgeWidth = 2
   // 节点最大的大小
   private nodeMaxSize = 10
+  // 节点最小大小
+  private nodeMinSize = 2
   // 边的颜色
   private edgeColor = '#bbb'
   // 节点的颜色
@@ -66,6 +80,16 @@ export class GridDraw {
   private priorTime = 3000 // ms
   private fps = 30
   private isContinue = true
+
+  // 时间控制缓存区
+  private periodControl : TimePeriodControl = {
+    nowPeriod: 0,
+    maxPeriod: 0,
+    leftFrame: 0,
+    fps: this.fps,
+    priorTime: this.priorTime,
+    idle: false
+  }
 
   public constructor (dom: HTMLCanvasElement) {
     this.canvas = new fabric.Canvas(dom)
@@ -128,14 +152,15 @@ export class GridDraw {
             left: widthBf + intervalPx * loopWidth,
             top: heightBf + intervalPx * loopHeight
           },
-          size: 2 + Math.random() * 8,
-          obj: null as unknown as fabric.Circle
+          nowReward: 0,
+          obj: null as unknown as fabric.Circle,
+          rewards: []
         } as NodeInterface
         const node = new fabric.Circle({
-          left: tempNode.position.left + this.nodeMaxSize - tempNode.size,
-          top: tempNode.position.top + this.nodeMaxSize - tempNode.size,
+          left: tempNode.position.left + this.nodeMaxSize - (this.getNodeSize(tempNode.nowReward)),
+          top: tempNode.position.top + this.nodeMaxSize - (this.getNodeSize(tempNode.nowReward)),
           fill: this.nodeColor,
-          radius: tempNode.size,
+          radius: (this.getNodeSize(tempNode.nowReward)),
           selectable: false,
           evented: false
         })
@@ -181,28 +206,49 @@ export class GridDraw {
   }
 
   public run () : void {
-    this.agents.forEach((value) => {
+    if (this.periodControl.leftFrame === 0) {
+      if (this.periodControl.maxPeriod > this.periodControl.nowPeriod) {
+        this.periodControl.nowPeriod++
+        this.periodControl.leftFrame = this.priorTime / 1000 * this.fps
+        this.periodControl.idle = false
+        this.periodControl.fps = this.fps
+        this.periodControl.priorTime = this.priorTime
+      } else {
+        this.periodControl.leftFrame = this.minWaitTime / 1000 * this.fps
+        this.periodControl.idle = true
+      }
+    }
+    this.periodControl.leftFrame--
+
+    // 如果正在挂机状态，就不运行接下来的内容，使得整个状态处于冻结状态
+    if (this.periodControl.idle) return
+
+    this.agents.forEach((value, agentIndex) => {
       if (value.actionLeftFrame <= 0) {
-        if (value.nowIndex >= value.path.length) {
-          value.actionLeftFrame = Math.floor(this.minWaitTime / 1000 * this.fps)
-          value.speed = {
-            top: 0,
-            left: 0
+        // 判断是否应该进入下一个路径
+        if (value.nowIndex < value.path.length && value.path[value.nowIndex].beginPeriod + value.path[value.nowIndex].period <= this.periodControl.nowPeriod - 1) {
+          value.nowIndex++
+          if (value.nowIndex > value.path.length) {
+            console.error('Something Error. agent index: ' + agentIndex + ', now index: ' + value.nowIndex + ', path len: ' + value.path.length)
+            return
+          } else {
+            const nextEdge = value.path[value.nowIndex]
+            const nowPosition = this.nodes[nextEdge.beginNodeIndex].position
+            value.nowPosition.left = nowPosition.left
+            value.nowPosition.top = nowPosition.top
           }
-          return
         }
+
         const nextEdge = value.path[value.nowIndex]
-        const countFrame = Math.floor(this.priorTime / 1000 * this.fps)
-        const nowPosition = this.nodes[nextEdge.beginNodeIndex].position
+        const leftFrame = Math.floor(((nextEdge.beginPeriod + nextEdge.period) - this.periodControl.nowPeriod + 1) * this.periodControl.priorTime / 1000 * this.fps)
+        const countFrame = Math.min(leftFrame, this.periodControl.leftFrame + 1)
+        const lastPosition = this.nodes[nextEdge.beginNodeIndex].position
         const nextPosition = this.nodes[nextEdge.endNodeIndex].position
-        value.nowPosition.left = nowPosition.left
-        value.nowPosition.top = nowPosition.top
         value.actionLeftFrame = countFrame
         value.speed = {
-          top: (nextPosition.top - value.nowPosition.top) / countFrame,
-          left: (nextPosition.left - value.nowPosition.left) / countFrame
+          top: (nextPosition.top - lastPosition.top) / (nextEdge.period * this.periodControl.priorTime / 1000 * this.fps),
+          left: (nextPosition.left - lastPosition.left) / (nextEdge.period * this.periodControl.priorTime / 1000 * this.fps)
         }
-        value.nowIndex++
       }
       value.actionLeftFrame--
       value.nowPosition.left += value.speed.left
@@ -210,6 +256,15 @@ export class GridDraw {
       value.obj.set('top', value.nowPosition.top)
       value.obj.set('left', value.nowPosition.left)
       value.obj.setCoords()
+    })
+
+    this.nodes.forEach((value) => {
+      if (value.rewards[this.periodControl.nowPeriod - 1] !== value.nowReward) {
+        value.nowReward = value.rewards[this.periodControl.nowPeriod - 1]
+        value.obj.set('radius', this.getNodeSize(value.nowReward))
+        value.obj.set('left', value.position.left + this.nodeMaxSize - (this.getNodeSize(value.nowReward)))
+        value.obj.set('top', value.position.top + this.nodeMaxSize - (this.getNodeSize(value.nowReward)))
+      }
     })
   }
 
@@ -233,20 +288,44 @@ export class GridDraw {
         nodeIndex: value
       } as RewardInterface
     }))
+
+    // 添加智能体路径
     snapshot.agents.forEach((value) => {
       const periodPerEdge = value.period / value.path.length
       value.path.forEach((pvalue, index) => {
         if (index === 0) return
+        let beginPeriod = 0
+        const pathLen = this.agents[value.agent_id].path.length
+        if (pathLen !== 0) {
+          beginPeriod = this.agents[value.agent_id].path[pathLen - 1].beginPeriod +
+            this.agents[value.agent_id].path[pathLen - 1].period
+        }
         this.agents[value.agent_id].path.push({
           beginNodeIndex: value.path[index - 1],
           endNodeIndex: pvalue,
-          period: periodPerEdge
+          period: periodPerEdge,
+          beginPeriod: beginPeriod
         } as PathInterface)
       })
     })
+
+    // 添加节点收益
+    this.nodes.forEach((pvalue, index) => {
+      pvalue.rewards.push(
+        snapshot.rewards.filter((value) => {
+          return value === index
+        }).length
+      )
+    })
+
+    this.periodControl.maxPeriod += 1
   }
 
   public pathSetTime () : number {
     return this.rewards.length
+  }
+
+  private getNodeSize (reward : number) {
+    return this.nodeMinSize + (this.nodeMaxSize - this.nodeMinSize) * (2 / (1 + Math.exp(-reward)) - 1)
   }
 }

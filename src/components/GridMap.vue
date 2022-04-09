@@ -46,6 +46,7 @@ export default defineComponent({
         gridDraw.stop()
       }
       this.createDraw(newVal)
+      console.log(gridDraw)
     },
     snapshotLen (newVal : number) {
       store.state.snapshots.slice(gridDraw!.pathSetTime()).forEach((value) => {

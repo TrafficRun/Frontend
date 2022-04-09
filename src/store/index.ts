@@ -1,6 +1,5 @@
 import { createStore } from 'vuex'
 import { TrafficServer, GameSnapshotInterface, SettingReturnInterface } from '@/network/server'
-import { number } from 'echarts'
 
 export interface GameSettingInterface {
   sumTimeStep: number,
