@@ -14,7 +14,7 @@ interface PathInterface {
   endNodeIndex: number
 }
 
-interface TimeConfigInterface {
+export interface TimeConfigInterface {
   fps: number,
   priorTime: number,
   waiteTime: number
@@ -27,6 +27,11 @@ class TimeControl {
   private mLeftFrame = 0
   private mIsIdle = false
 
+  private realFPS = 0.0
+  private lastFPSCount = 0
+  private lastTimestamp = 0
+  private timeStepIncrCallBack : (() => void) | null = null
+
   // 作为配置缓冲区，赋值时使用深拷贝，保证运行时不会出现问题
   private timeConfig : TimeConfigInterface = {
     fps: 0,
@@ -34,8 +39,9 @@ class TimeControl {
     waiteTime: 0
   }
 
-  public constructor (timeConfig: TimeConfigInterface) {
+  public constructor (timeConfig: TimeConfigInterface, timeStepIncrFunc : (() => void) | null = null) {
     Object.assign(this.timeConfig, timeConfig)
+    this.timeStepIncrCallBack = timeStepIncrFunc
   }
 
   public idle () : boolean {
@@ -69,10 +75,20 @@ class TimeControl {
         // run next Period
         this.mIsIdle = false
         this.mNowPeriod++
+        if (this.timeStepIncrCallBack !== null) {
+          this.timeStepIncrCallBack()
+        }
         this.mLeftFrame = this.computeFrameNumber(this.timeConfig.priorTime)
       }
     }
     this.mLeftFrame--
+    this.lastFPSCount++
+    const nowTimestap = (new Date()).getTime()
+    if (nowTimestap - this.lastTimestamp > 1000) {
+      this.realFPS = this.lastFPSCount * 1000 / ((nowTimestap - this.lastTimestamp))
+      this.lastFPSCount = 0
+      this.lastTimestamp = nowTimestap
+    }
   }
 
   // 依据时间计算帧数
@@ -86,7 +102,7 @@ class TimeControl {
   }
 }
 
-interface NodeConfigInterface {
+export interface NodeConfigInterface {
   maxSize: number,
   minSize: number,
   color: string
@@ -159,7 +175,7 @@ class Node {
     this.rewards.push(reward)
   }
 }
-interface AgentConfigInterface {
+export interface AgentConfigInterface {
   // 计算智能体位置需要的信息
   nodeMaxSize: number,
   size: number,
@@ -181,7 +197,7 @@ class Agent {
   private actionLeftPeriod = 0
   private nowPathIndex = -1
   private paths: PathInterface[] = []
-  private obj: fabric.Circle
+  private obj: fabric.Triangle
   private timeControl: TimeControl
   private agentConfig: AgentConfigInterface = {
     nodeMaxSize: 10,
@@ -196,11 +212,12 @@ class Agent {
     this.nodes = nodes
     Object.assign(this.agentConfig, agentConfig)
     const reposiotion = this.reposiotion(position)
-    this.obj = new fabric.Circle({
+    this.obj = new fabric.Triangle({
       top: reposiotion.top,
       left: reposiotion.left,
       fill: this.agentConfig.color,
-      radius: this.agentConfig.size,
+      height: this.agentConfig.size,
+      width: this.agentConfig.size,
       selectable: false,
       evented: false
     })
@@ -250,7 +267,7 @@ class Agent {
     this.obj.set('left', reposiotion.left)
   }
 
-  public getObject () : fabric.Circle {
+  public getObject () : fabric.Triangle {
     return this.obj
   }
 
@@ -266,10 +283,23 @@ class Agent {
 
   private reposiotion (position : PositionInterface) : PositionInterface {
     const result : PositionInterface = {
-      top: position.top + this.agentConfig.nodeMaxSize - this.agentConfig.size,
-      left: position.left + this.agentConfig.nodeMaxSize - this.agentConfig.size
+      top: position.top + this.agentConfig.size / 2 - this.agentConfig.nodeMaxSize,
+      left: position.left + this.agentConfig.size / 2 - this.agentConfig.nodeMaxSize
     }
     return result
+  }
+
+  private getAngle (speed : PositionInterface) : number | null {
+    if (speed.left === 0 && speed.top === 0) return null
+    if (speed.left === 0) {
+      if (speed.top < 0) return 90
+      else return 270
+    }
+    if (speed.top > 0) {
+      return Math.atan(speed.top / speed.left) / Math.PI * 180 + 180
+    } else {
+      return Math.atan(speed.top / speed.left) / Math.PI * 180
+    }
   }
 }
 
@@ -294,14 +324,14 @@ export class GridDraw {
 
   // 智能体配置
   private agentConfig : AgentConfigInterface = {
-    size: 10,
+    size: 20,
     color: '#73c0de',
     nodeMaxSize: this.nodeConfig.maxSize
   }
 
   // 时间配置
   private timeConfig : TimeConfigInterface = {
-    fps: 30,
+    fps: 20,
     priorTime: 3000,
     waiteTime: 300
   }
@@ -314,10 +344,10 @@ export class GridDraw {
 
   private isContinue = true
 
-  public constructor (dom: HTMLCanvasElement) {
+  public constructor (dom: HTMLCanvasElement, timeStepIncrFunc : (() => void) | null = null) {
     this.canvas = new fabric.Canvas(dom)
     this.canvas.selection = false
-    this.timeControl = new TimeControl(this.timeConfig)
+    this.timeControl = new TimeControl(this.timeConfig, timeStepIncrFunc)
   }
 
   public setEnv (height: number, width: number) : void {
@@ -407,13 +437,22 @@ export class GridDraw {
     })
   }
 
-  public render () : void {
+  public render (randerTime = 0) : void {
+    const beginTimestamp = (new Date()).getTime()
+    const countIntervalTimestamp = 1000 / this.timeControl.config().fps
+    let runIntervalTimestamp = 0
+    if (randerTime <= countIntervalTimestamp) {
+      runIntervalTimestamp = countIntervalTimestamp - randerTime
+    } else {
+      runIntervalTimestamp = 0
+    }
     if (this.isContinue) {
       setTimeout(() => {
         this.run()
         this.canvas.renderAll()
-        this.render()
-      }, 1000 / this.timeControl.config().fps)
+        const nowTimestap = (new Date()).getTime()
+        this.render(nowTimestap - beginTimestamp)
+      }, runIntervalTimestamp)
     }
   }
 

@@ -1,5 +1,6 @@
 import { createStore } from 'vuex'
 import { TrafficServer, GameSnapshotInterface, SettingReturnInterface } from '@/network/server'
+import { TimeConfigInterface, AgentConfigInterface, NodeConfigInterface } from '@/grid/grid'
 
 export interface GameSettingInterface {
   sumTimeStep: number,
@@ -9,7 +10,10 @@ export interface GameSettingInterface {
   graph: {
     height: number,
     width: number
-  }
+  },
+  timeConfig: TimeConfigInterface,
+  agentConfig: AgentConfigInterface,
+  nodeConfig: NodeConfigInterface
 }
 
 export interface State {
@@ -35,6 +39,21 @@ export default createStore<State>({
       graph: {
         height: 0,
         width: 0
+      },
+      nodeConfig: {
+        maxSize: 10,
+        minSize: 2,
+        color: '#5470c6'
+      },
+      agentConfig: {
+        size: 20,
+        color: '#73c0de',
+        nodeMaxSize: 10
+      },
+      timeConfig: {
+        fps: 20,
+        priorTime: 3000,
+        waiteTime: 300
       }
     },
     backendInfo: ''
@@ -60,7 +79,22 @@ export default createStore<State>({
           height: returnSetting.graph.height,
           width: returnSetting.graph.width
         },
-        sumTimeStep: returnSetting.time_step
+        sumTimeStep: returnSetting.time_step,
+        nodeConfig: {
+          maxSize: 10,
+          minSize: 2,
+          color: '#5470c6'
+        },
+        agentConfig: {
+          size: 20,
+          color: '#73c0de',
+          nodeMaxSize: 10
+        },
+        timeConfig: {
+          fps: 20,
+          priorTime: 3000,
+          waiteTime: 300
+        }
       }
     },
     backendInfo (state, information : string) {

@@ -28,7 +28,8 @@ interface GameSnapshotPathInterface {
 export interface GameSnapshotInterface {
   time_step: number,
   agents: GameSnapshotPathInterface[],
-  rewards: number[]
+  rewards: number[],
+  gain: number
 }
 
 export interface ParameterItemInterface {

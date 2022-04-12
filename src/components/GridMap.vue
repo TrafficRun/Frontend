@@ -23,7 +23,9 @@ export default defineComponent({
       const drawCanvas = this.$refs.gridmap as HTMLCanvasElement
       drawCanvas.height = drawCanvasContainer.clientHeight
       drawCanvas.width = drawCanvasContainer.clientWidth
-      gridDraw = new GridDraw(drawCanvas)
+      gridDraw = new GridDraw(drawCanvas, () => {
+        store.commit('increaseTimeStep')
+      })
       gridDraw.setEnv(gameSetting.graph.height, gameSetting.graph.width)
       gridDraw.setAgentNumber(gameSetting.agentNumber)
       gridDraw.render()

@@ -27,7 +27,7 @@ export default defineComponent({
         },
         yAxis: {},
         series: [{
-          data: [[1, 2], [2, 3], [3, 4]] as number[][],
+          data: [] as number[][],
           type: 'line'
         }],
         grid: {
@@ -42,8 +42,8 @@ export default defineComponent({
   mounted () {
     const chartDom = this.$refs.serverRatio as HTMLElement
     mySuccessChart = echarts.init(chartDom)
-    // this.myOption.series[0].data = this.successData
     this.myOption.xAxis.max = 24
+    this.myOption.series[0].data = this.successData
     mySuccessChart.setOption(this.myOption)
   },
   computed: {
@@ -52,6 +52,9 @@ export default defineComponent({
     },
     timeStep () {
       return store.state.timeStep
+    },
+    snapshots () {
+      return store.state.snapshots
     }
   },
   watch: {
@@ -60,8 +63,11 @@ export default defineComponent({
       mySuccessChart.setOption(this.myOption)
     },
     timeStep: function (newVal: number) {
-      const lastValue = this.successData.length === 0 ? 0 : this.successData[this.successData.length - 1][1]
-      this.successData.push([newVal, mreward[newVal] + lastValue])
+      if (newVal === 0) {
+        return
+      }
+      console.log('Test')
+      this.successData.push([newVal, this.snapshots[newVal - 1].gain])
       mySuccessChart.setOption(this.myOption)
     }
   }

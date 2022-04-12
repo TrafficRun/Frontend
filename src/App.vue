@@ -28,34 +28,7 @@
       </el-aside>
     </el-container>
   </el-container>
-  <el-drawer v-model="drawer">
-  <template #title>
-    <h4>Set</h4>
-  </template>
-  <template #default>
-    <el-form :model="setting">
-      <el-form-item label="Server Name">
-        <el-row>
-          <el-col :span="18">
-            <el-input v-model="setting.serverName"></el-input>
-          </el-col>
-          <el-col :offset="2" :span="4">
-            <el-button @click="reconnect">
-              <el-icon><Sort /></el-icon>
-            </el-button>
-          </el-col>
-        </el-row>
-      </el-form-item>
-    </el-form>
-  </template>
-  <template #footer>
-    <h5>
-      {{ backendInfo }}
-    </h5>
-    <el-divider />
-    <el-button type="primary">OK</el-button>
-  </template>
-  </el-drawer>
+  <Setting v-model:drawer="drawer"></Setting>
 </template>
 
 <script lang="ts">
@@ -63,9 +36,10 @@ import { defineComponent } from 'vue'
 import GridMap from './components/GridMap.vue'
 import Display from './components/Display.vue'
 import Control from './components/Control.vue'
+import Setting from './components/Setting.vue'
 import { ElMessageBox } from 'element-plus'
 import store from '@/store/index'
-import { Menu, Sort } from '@element-plus/icons-vue'
+import { Menu } from '@element-plus/icons-vue'
 
 export default defineComponent({
   name: 'App',
@@ -74,7 +48,7 @@ export default defineComponent({
     Display,
     Control,
     Menu,
-    Sort
+    Setting
   },
   data () {
     return {
