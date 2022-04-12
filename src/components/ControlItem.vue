@@ -77,7 +77,8 @@ export default defineComponent({
   name: 'ControlItem',
   props: {
     parameterItem: null as any,
-    inputValue: null as any
+    inputValue: null as any,
+    disabled: Boolean
   },
   emits: ['update:inputValue'],
   data () {
@@ -96,6 +97,7 @@ export default defineComponent({
       return this.parameterItem as ParameterItemInterface
     },
     isDisable () {
+      if (this.disabled === true) return true
       const parameterName = this.parameter.name
       if (disableNameList.find((value) => { return parameterName === value }) === undefined) {
         return false

@@ -1,32 +1,32 @@
 <template>
-    <el-collapse>
-      <el-collapse-item>
-        <template #title>
-          Global <el-divider direction="vertical"></el-divider> <el-tag>{{ global.length }}</el-tag>
-        </template>
-        <el-form>
-          <ControlItem v-model:inputValue="item.default_value" v-for="item in global" :key="item.name" :parameterItem="item" />
-        </el-form>
-      </el-collapse-item>
-      <el-collapse-item>
-        <template #title>
-          Env <el-divider direction="vertical"></el-divider> <el-tag>{{ env.length }}</el-tag>
-        </template>
-        <el-form>
-          <ControlItem v-model:inputValue="item.default_value" v-for="item in env" :key="item.name" :parameterItem="item" />
-        </el-form>
-      </el-collapse-item>
-      <el-collapse-item v-for="configItem in extConfig" :key="configItem.name">
-        <template #title>
-          {{ configItem.name }} <el-divider direction="vertical"></el-divider> <el-tag>{{ configItem.parameters.length }}</el-tag>
-        </template>
-        <el-form>
-          <ControlItem v-model:inputValue="item.default_value" v-for="item in configItem.parameters" :key="item.name" :parameterItem="item" />
-        </el-form>
-      </el-collapse-item>
-    </el-collapse>
-    <el-divider></el-divider>
-    <el-button type="primary" @click="runTraffic" :loading="runButtonLoading">运行</el-button>
+  <el-collapse>
+    <el-collapse-item>
+      <template #title>
+        Global <el-divider direction="vertical"></el-divider> <el-tag>{{ global.length }}</el-tag>
+      </template>
+      <el-form>
+        <ControlItem v-model:inputValue="item.default_value" v-for="item in global" :key="item.name" :parameterItem="item" :disabled="formDisable" />
+      </el-form>
+    </el-collapse-item>
+    <el-collapse-item>
+      <template #title>
+        Env <el-divider direction="vertical"></el-divider> <el-tag>{{ env.length }}</el-tag>
+      </template>
+      <el-form>
+        <ControlItem v-model:inputValue="item.default_value" v-for="item in env" :key="item.name" :parameterItem="item" :disabled="formDisable" />
+      </el-form>
+    </el-collapse-item>
+    <el-collapse-item v-for="configItem in extConfig" :key="configItem.name">
+      <template #title>
+        {{ configItem.name }} <el-divider direction="vertical"></el-divider> <el-tag>{{ configItem.parameters.length }}</el-tag>
+      </template>
+      <el-form>
+        <ControlItem v-model:inputValue="item.default_value" v-for="item in configItem.parameters" :key="item.name" :parameterItem="item" :disabled="formDisable" />
+      </el-form>
+    </el-collapse-item>
+  </el-collapse>
+  <el-divider></el-divider>
+  <el-button type="primary" @click="runTraffic" :loading="runButtonLoading" :disabled="formDisable">运行</el-button>
 </template>
 
 <script lang="ts">
@@ -57,7 +57,8 @@ export default defineComponent({
       generatorParameterIndex: 0 as number,
       runButtonLoading: false,
       requestTime: 0,
-      getResultRetry: 0
+      getResultRetry: 0,
+      formDisable: false
     }
   },
   mounted () {
@@ -133,6 +134,7 @@ export default defineComponent({
   methods: {
     runTraffic () {
       this.runButtonLoading = true
+      this.formDisable = true
       const setResultParameter : SetResultParameterInterface = {}
       this.global.forEach((value) => {
         setResultParameter[value.name] = value.default_value
@@ -155,6 +157,7 @@ export default defineComponent({
           })
         }
       }).catch((reason) => {
+        this.formDisable = false
         ElMessageBox.alert(reason, 'Error', {
           confirmButtonText: 'OK'
         })
