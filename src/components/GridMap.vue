@@ -6,9 +6,8 @@
 
 <script lang="ts">
 import { GridDraw } from '@/grid/grid'
-import store, { GameSettingInterface } from '@/store'
+import store, { GameSettingInterface } from '@/store/index'
 import { defineComponent } from 'vue'
-import { GameSnapshotInterface } from '@/network/server'
 
 let gridDraw: null | GridDraw = null
 
@@ -17,6 +16,9 @@ export default defineComponent({
   data () {
     return {}
   },
+  props: [
+    'modelName'
+  ],
   methods: {
     createDraw (gameSetting : GameSettingInterface) {
       const drawCanvasContainer = this.$refs.gridmapcontainer as HTMLElement

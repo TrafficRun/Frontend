@@ -48,6 +48,9 @@ export default defineComponent({
   components: {
     ControlItem
   },
+  props: [
+    'viewModelName'
+  ],
   data: () => {
     return {
       global: [] as ParameterItemInterface[],
@@ -77,7 +80,7 @@ export default defineComponent({
       return store.state.server
     },
     sumTimeStep () : number {
-      return store.state.gameSetting.sumTimeStep
+      return store.state.model.sumTimeStep
     },
     token () : string {
       return store.state.gameSetting.token

@@ -66,7 +66,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { Sort } from '@element-plus/icons-vue'
-import store from '@/store'
+import store from '@/store/index'
 
 export default defineComponent({
   name: 'Setting',

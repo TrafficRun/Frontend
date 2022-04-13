@@ -17,11 +17,13 @@
       </el-row>
     </el-header>
     <el-container class="main-container">
-      <el-aside width="300px" class="my-container">
-        <Control />
-      </el-aside>
-      <el-main class="my-container map-container">
-        <GridMap />
+      <el-main>
+        <el-tabs type="card" addable @tab-add="addModel">
+          <el-tab-pane :label="model.name" v-for="model in models" :key="model.name">
+            <RunModel :model-name="model.name">
+            </RunModel>
+          </el-tab-pane>
+        </el-tabs>
       </el-main>
       <el-aside width="300px" class="my-container">
         <Display />
@@ -33,29 +35,34 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import GridMap from './components/GridMap.vue'
 import Display from './components/Display.vue'
-import Control from './components/Control.vue'
+import RunModel from './components/RunModel.vue'
 import Setting from './components/Setting.vue'
 import { ElMessageBox } from 'element-plus'
 import store from '@/store/index'
 import { Menu } from '@element-plus/icons-vue'
 
+interface ModelViewInterface {
+  name: string
+}
+
 export default defineComponent({
   name: 'App',
   components: {
-    GridMap,
     Display,
-    Control,
     Menu,
-    Setting
+    Setting,
+    RunModel
   },
   data () {
     return {
       drawer: false,
       setting: {
         serverName: ''
-      }
+      },
+      models: [{
+        name: 'default'
+      }] as ModelViewInterface[]
     }
   },
   mounted () {
@@ -74,6 +81,11 @@ export default defineComponent({
         this.setting.serverName = value
         store.commit('setServerHost', value)
         store.dispatch('backendInfo')
+      })
+    },
+    addModel () {
+      this.models.push({
+        name: 'Model ' + this.models.length
       })
     }
   },

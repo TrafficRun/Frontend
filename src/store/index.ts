@@ -1,8 +1,15 @@
 import { createStore } from 'vuex'
-import { TrafficServer, GameSnapshotInterface, SettingReturnInterface } from '@/network/server'
+import { TrafficServer, GameSnapshotInterface } from '@/network/server'
 import { TimeConfigInterface, AgentConfigInterface, NodeConfigInterface } from '@/grid/grid'
 
 export interface GameSettingInterface {
+  timeConfig: TimeConfigInterface,
+  agentConfig: AgentConfigInterface,
+  nodeConfig: NodeConfigInterface
+}
+
+interface ModelSetting {
+  timeStep: number,
   sumTimeStep: number,
   agentNumber: number,
   graphType: string,
@@ -11,35 +18,19 @@ export interface GameSettingInterface {
     height: number,
     width: number
   },
-  timeConfig: TimeConfigInterface,
-  agentConfig: AgentConfigInterface,
-  nodeConfig: NodeConfigInterface
-}
-
-export interface State {
-  timeStep: number,
-  serverHost: string,
-  server: TrafficServer | undefined,
   snapshots: GameSnapshotInterface[],
-  gameSetting: GameSettingInterface,
-  backendInfo: string
+  modelName: string
 }
 
-export default createStore<State>({
+export interface ModelSettings {
+  [key : string] : ModelSetting
+}
+
+export default createStore({
   state: {
-    timeStep: 0,
     serverHost: '127.0.0.1:53434',
-    server: undefined,
-    snapshots: [],
+    server: undefined as TrafficServer | undefined,
     gameSetting: {
-      sumTimeStep: 0,
-      agentNumber: 0,
-      token: '',
-      graphType: 'grid',
-      graph: {
-        height: 0,
-        width: 0
-      },
       nodeConfig: {
         maxSize: 10,
         minSize: 2,
@@ -55,50 +46,45 @@ export default createStore<State>({
         priorTime: 3000,
         waiteTime: 300
       }
-    },
-    backendInfo: ''
+    } as GameSettingInterface,
+    backendInfo: '',
+    models: {} as ModelSettings
   },
   mutations: {
-    increaseTimeStep (state) {
-      state.timeStep++
-    },
     setServerHost (state, serverHost: string) {
       state.serverHost = serverHost
       state.server = new TrafficServer(serverHost)
     },
-    addSnapShot (state, snapshot : GameSnapshotInterface) {
-      state.snapshots.push(snapshot)
-    },
-    gameSetting (state, returnSetting: SettingReturnInterface) {
-      state.snapshots = []
-      state.gameSetting = {
-        agentNumber: returnSetting.agent_number,
-        graphType: returnSetting.graph_type,
-        token: returnSetting.token,
-        graph: {
-          height: returnSetting.graph.height,
-          width: returnSetting.graph.width
-        },
-        sumTimeStep: returnSetting.time_step,
-        nodeConfig: {
-          maxSize: 10,
-          minSize: 2,
-          color: '#5470c6'
-        },
-        agentConfig: {
-          size: 20,
-          color: '#73c0de',
-          nodeMaxSize: 10
-        },
-        timeConfig: {
-          fps: 20,
-          priorTime: 3000,
-          waiteTime: 300
-        }
-      }
-    },
     backendInfo (state, information : string) {
       state.backendInfo = information
+    },
+    addModel (state : ModelSettings, modelName: string) {
+      state[modelName] = {
+        timeStep: 0,
+        sumTimeStep: 24,
+        agentNumber: 0,
+        graphType: '',
+        token: '',
+        graph: {
+          height: 0,
+          width: 0
+        },
+        snapshots: [],
+        modelName: modelName
+      }
+    },
+    modelSetting (state : ModelSettings, { modelName, returnSetting } : { modelName: string, returnSetting: SettingReturnInterface }) {
+      state[modelName].agentNumber = returnSetting.agent_number
+      state[modelName].graph = returnSetting.graph
+      state[modelName].graphType = returnSetting.graph_type
+      state[modelName].sumTimeStep = returnSetting.time_step
+      state[modelName].token = returnSetting.token
+    },
+    addSnapShot (state : ModelSettings, { modelName, snapshot } : { modelName: string, snapshot : GameSnapshotInterface }) {
+      state[modelName].snapshots.push(snapshot)
+    },
+    increaseTimeStep (state : ModelSettings, modelName: string) {
+      state[modelName].timeStep++
     }
   },
   actions: {
@@ -111,7 +97,5 @@ export default createStore<State>({
         })
       }
     }
-  },
-  modules: {
   }
 })

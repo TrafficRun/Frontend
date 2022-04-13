@@ -66,7 +66,6 @@ export default defineComponent({
       if (newVal === 0) {
         return
       }
-      console.log('Test')
       this.successData.push([newVal, this.snapshots[newVal - 1].gain])
       mySuccessChart.setOption(this.myOption)
     }
