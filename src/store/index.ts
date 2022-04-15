@@ -1,5 +1,5 @@
 import { createStore } from 'vuex'
-import { TrafficServer, GameSnapshotInterface } from '@/network/server'
+import { TrafficServer, GameSnapshotInterface, SettingReturnInterface } from '@/network/server'
 import { TimeConfigInterface, AgentConfigInterface, NodeConfigInterface } from '@/grid/grid'
 
 export interface GameSettingInterface {
@@ -8,7 +8,7 @@ export interface GameSettingInterface {
   nodeConfig: NodeConfigInterface
 }
 
-interface ModelSetting {
+export interface ModelSettingInterface {
   timeStep: number,
   sumTimeStep: number,
   agentNumber: number,
@@ -22,8 +22,14 @@ interface ModelSetting {
   modelName: string
 }
 
-export interface ModelSettings {
-  [key : string] : ModelSetting
+export interface ModelSettingsInterface {
+  [key : string] : ModelSettingInterface
+}
+
+export interface DisplayActionInterface {
+  action: string, // add update
+  modelName: string
+  data: number
 }
 
 export default createStore({
@@ -48,7 +54,9 @@ export default createStore({
       }
     } as GameSettingInterface,
     backendInfo: '',
-    models: {} as ModelSettings
+    models: {} as ModelSettingsInterface,
+    displayAction: [] as DisplayActionInterface[],
+    maxTimeStep: 24
   },
   mutations: {
     setServerHost (state, serverHost: string) {
@@ -58,8 +66,8 @@ export default createStore({
     backendInfo (state, information : string) {
       state.backendInfo = information
     },
-    addModel (state : ModelSettings, modelName: string) {
-      state[modelName] = {
+    addModel (state, modelName: string) {
+      state.models[modelName] = {
         timeStep: 0,
         sumTimeStep: 24,
         agentNumber: 0,
@@ -73,18 +81,31 @@ export default createStore({
         modelName: modelName
       }
     },
-    modelSetting (state : ModelSettings, { modelName, returnSetting } : { modelName: string, returnSetting: SettingReturnInterface }) {
-      state[modelName].agentNumber = returnSetting.agent_number
-      state[modelName].graph = returnSetting.graph
-      state[modelName].graphType = returnSetting.graph_type
-      state[modelName].sumTimeStep = returnSetting.time_step
-      state[modelName].token = returnSetting.token
+    modelSetting (state, { modelName, returnSetting } : { modelName: string, returnSetting: SettingReturnInterface }) {
+      state.models[modelName].agentNumber = returnSetting.agent_number
+      state.models[modelName].graph = returnSetting.graph
+      state.models[modelName].graphType = returnSetting.graph_type
+      state.models[modelName].sumTimeStep = returnSetting.time_step
+      state.models[modelName].token = returnSetting.token
+      if (state.models[modelName].sumTimeStep > state.maxTimeStep) {
+        state.maxTimeStep = state.models[modelName].sumTimeStep
+      }
+      state.displayAction.push({
+        action: 'add',
+        modelName: modelName,
+        data: state.models[modelName].sumTimeStep
+      })
     },
-    addSnapShot (state : ModelSettings, { modelName, snapshot } : { modelName: string, snapshot : GameSnapshotInterface }) {
-      state[modelName].snapshots.push(snapshot)
+    addSnapShot (state, { modelName, snapshot } : { modelName: string, snapshot : GameSnapshotInterface }) {
+      state.models[modelName].snapshots.push(snapshot)
     },
-    increaseTimeStep (state : ModelSettings, modelName: string) {
-      state[modelName].timeStep++
+    increaseTimeStep (state, modelName: string) {
+      state.models[modelName].timeStep++
+      state.displayAction.push({
+        action: 'update',
+        modelName: modelName,
+        data: state.models[modelName].snapshots[state.models[modelName].timeStep - 1].gain
+      })
     }
   },
   actions: {

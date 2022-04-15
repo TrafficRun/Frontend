@@ -60,9 +60,7 @@ export default defineComponent({
       setting: {
         serverName: ''
       },
-      models: [{
-        name: 'default'
-      }] as ModelViewInterface[]
+      models: [] as ModelViewInterface[]
     }
   },
   mounted () {
@@ -84,8 +82,10 @@ export default defineComponent({
       })
     },
     addModel () {
+      const addModel = 'Model ' + this.models.length
+      store.commit('addModel', addModel)
       this.models.push({
-        name: 'Model ' + this.models.length
+        name: addModel
       })
     }
   },

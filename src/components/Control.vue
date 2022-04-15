@@ -80,10 +80,10 @@ export default defineComponent({
       return store.state.server
     },
     sumTimeStep () : number {
-      return store.state.model.sumTimeStep
+      return store.state.models[this.viewModelName].sumTimeStep
     },
     token () : string {
-      return store.state.gameSetting.token
+      return store.state.models[this.viewModelName].token
     }
   },
   watch: {
@@ -152,7 +152,10 @@ export default defineComponent({
       })
       this.server!.setBegin(setResultParameter).then((value) => {
         if (value !== null) {
-          store.commit('gameSetting', value)
+          store.commit('modelSetting', {
+            modelName: this.viewModelName,
+            returnSetting: value
+          })
           setTimeout(this.requestResult, requestInterval)
         } else {
           ElMessageBox.alert('出现错误', 'Error', {
@@ -173,7 +176,10 @@ export default defineComponent({
         this.getResultRetry = 0
         if (value !== null) {
           this.requestTime += 1
-          store.commit('addSnapShot', value)
+          store.commit('addSnapShot', {
+            modelName: this.viewModelName,
+            snapshot: value
+          })
         }
       }).catch((reason) => {
         this.getResultRetry++

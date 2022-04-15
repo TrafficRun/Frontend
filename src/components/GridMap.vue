@@ -6,31 +6,35 @@
 
 <script lang="ts">
 import { GridDraw } from '@/grid/grid'
-import store, { GameSettingInterface } from '@/store/index'
+import store, { GameSettingInterface, ModelSettingInterface } from '@/store/index'
 import { defineComponent } from 'vue'
 
-let gridDraw: null | GridDraw = null
+const gridDraws: (GridDraw | null)[] = []
 
 export default defineComponent({
   name: 'GridMap',
   data () {
-    return {}
+    return {
+      gridDrawIndex: 0
+    }
   },
   props: [
     'modelName'
   ],
   methods: {
-    createDraw (gameSetting : GameSettingInterface) {
+    createDraw (gameSetting : GameSettingInterface, ModelSetting : ModelSettingInterface) {
       const drawCanvasContainer = this.$refs.gridmapcontainer as HTMLElement
       const drawCanvas = this.$refs.gridmap as HTMLCanvasElement
       drawCanvas.height = drawCanvasContainer.clientHeight
       drawCanvas.width = drawCanvasContainer.clientWidth
-      gridDraw = new GridDraw(drawCanvas, () => {
-        store.commit('increaseTimeStep')
+      const gridDraw = new GridDraw(drawCanvas, () => {
+        store.commit('increaseTimeStep', this.modelName)
       })
-      gridDraw.setEnv(gameSetting.graph.height, gameSetting.graph.width)
-      gridDraw.setAgentNumber(gameSetting.agentNumber)
-      gridDraw.render()
+      gridDraws[this.gridDrawIndex] = gridDraw
+
+      gridDraws[this.gridDrawIndex]!.setEnv(ModelSetting.graph.height, ModelSetting.graph.width)
+      gridDraws[this.gridDrawIndex]!.setAgentNumber(ModelSetting.agentNumber)
+      gridDraws[this.gridDrawIndex]!.render()
     }
   },
   computed: {
@@ -38,25 +42,35 @@ export default defineComponent({
       return store.state.gameSetting
     },
     snapshots () {
-      return store.state.snapshots
+      return store.state.models[this.modelName].snapshots
     },
     snapshotLen () {
-      return store.state.snapshots.length
+      return store.state.models[this.modelName].snapshots.length
+    },
+    modelSetting () {
+      return store.state.models[this.modelName]
+    },
+    modelToken () {
+      return store.state.models[this.modelName].token
     }
   },
   watch: {
-    gameSetting (newVal : GameSettingInterface) {
-      if (gridDraw !== null) {
-        gridDraw.stop()
+    modelToken (newVal : string) {
+      if (gridDraws[this.gridDrawIndex] !== null) {
+        gridDraws[this.gridDrawIndex]!.stop()
       }
-      this.createDraw(newVal)
-      console.log(gridDraw)
+      this.createDraw(this.gameSetting, this.modelSetting)
+      console.log(gridDraws[this.gridDrawIndex])
     },
     snapshotLen (newVal : number) {
-      store.state.snapshots.slice(gridDraw!.pathSetTime()).forEach((value) => {
-        gridDraw!.addSnapshots(value)
+      store.state.models[this.modelName].snapshots.slice(gridDraws[this.gridDrawIndex]!.pathSetTime()).forEach((value) => {
+        gridDraws[this.gridDrawIndex]!.addSnapshots(value)
       })
     }
+  },
+  mounted () {
+    this.gridDrawIndex = gridDraws.length
+    gridDraws.push(null)
   }
 })
 </script>
