@@ -12,7 +12,7 @@
                 <Menu />
               </el-icon>
             </el-button>
-            <el-button>
+            <el-button @click="historyDrawer = true">
               <el-icon>
                 <Tickets />
               </el-icon>
@@ -36,6 +36,7 @@
     </el-container>
   </el-container>
   <Setting v-model:drawer="drawer"></Setting>
+  <History v-model:drawer="historyDrawer"></History>
 </template>
 
 <script lang="ts">
@@ -43,6 +44,7 @@ import { defineComponent } from 'vue'
 import Display from './components/Display.vue'
 import RunModel from './components/RunModel.vue'
 import Setting from './components/Setting.vue'
+import History from './components/History.vue'
 import { ElMessageBox } from 'element-plus'
 import store from '@/store/index'
 import { Menu, Tickets } from '@element-plus/icons-vue'
@@ -58,11 +60,13 @@ export default defineComponent({
     Menu,
     Setting,
     RunModel,
-    Tickets
+    Tickets,
+    History
   },
   data () {
     return {
       drawer: false,
+      historyDrawer: false,
       setting: {
         serverName: ''
       },

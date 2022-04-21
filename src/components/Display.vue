@@ -1,6 +1,7 @@
 <template>
   <div class="ink-display">
       <div ref="serverRatio" id="serverRatio" style="width: 100%; height: 250px;"></div>
+      <div ref="serverTime" id="serverTime" style="width: 100%; height: 250px;"></div>
   </div>
   <br>
   <div>
@@ -38,6 +39,8 @@ interface ModelStatus {
 }
 
 let mySuccessChart : echarts.ECharts = null as unknown as echarts.ECharts
+let myTimeChart : echarts.ECharts = null as unknown as echarts.ECharts
+
 const modelIndex : {
   [key : string] : number
 } = {}
@@ -61,7 +64,28 @@ export default defineComponent({
         yAxis: {},
         series: [] as SeriesDataInterface[],
         grid: {
-          left: '10%',
+          left: '15%',
+          right: '3%',
+          bottom: '20%',
+          top: '20%'
+        }
+      },
+      myTimeOption: {
+        legend: {
+          bottom: 0,
+          type: 'scroll'
+        },
+        title: {
+          text: 'Planning Time'
+        },
+        xAxis: {
+          min: 0,
+          max: 0
+        },
+        yAxis: {},
+        series: [] as SeriesDataInterface[],
+        grid: {
+          left: '15%',
           right: '3%',
           bottom: '20%',
           top: '20%'
@@ -69,6 +93,7 @@ export default defineComponent({
       },
       actionNum: 0,
       dataStore: [] as SeriesDataInterface[],
+      timeStore: [] as SeriesDataInterface[],
       modelStatus: [] as ModelStatus[]
     }
   },
@@ -78,7 +103,6 @@ export default defineComponent({
     this.myOption.xAxis.max = 24
     this.myOption.series = this.dataStore
     mySuccessChart.setOption(this.myOption)
-    console.log(mySuccessChart)
     mySuccessChart.on('legendselectchanged', (event) => {
       const mevent = event as {
         type: string,
@@ -92,6 +116,12 @@ export default defineComponent({
         this.modelStatus[mindex].show = mevent.selected[modelName]
       }
     })
+
+    this.myTimeOption.xAxis.max = 24
+    this.myTimeOption.series = this.timeStore
+    const timeChartDom = this.$refs.serverTime as HTMLElement
+    myTimeChart = echarts.init(timeChartDom)
+    myTimeChart.setOption(this.myTimeOption)
   },
   computed: {
     maxTimeStep () {
@@ -115,7 +145,13 @@ export default defineComponent({
             type: 'line',
             name: action.modelName
           })
+          this.timeStore.push({
+            data: [],
+            type: 'line',
+            name: action.modelName
+          })
           mySuccessChart.setOption(this.myOption)
+          myTimeChart.setOption(this.myTimeOption)
           const modelColor = mySuccessChart.getVisual({
             dataIndex: modelIndex[action.modelName],
             seriesIndex: modelIndex[action.modelName]
@@ -133,7 +169,12 @@ export default defineComponent({
             this.dataStore[changeIndex].data.length,
             action.data
           ])
+          this.timeStore[changeIndex].data.push([
+            this.timeStore[changeIndex].data.length,
+            3000 - Math.random() * 200
+          ])
           mySuccessChart.setOption(this.myOption)
+          myTimeChart.setOption(this.myTimeOption)
           this.modelStatus[changeIndex].timeStep++
         }
       })

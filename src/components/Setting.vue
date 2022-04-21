@@ -4,7 +4,7 @@
   <h4>Set</h4>
 </template>
 <template #default>
-  <el-form :model="setting" disabled>
+  <el-form :model="setting">
     <el-collapse>
       <el-collapse-item title="Server Config">
         <el-form-item label="Server Name">

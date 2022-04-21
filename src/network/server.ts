@@ -10,6 +10,18 @@ export interface ParameterRangeExtInterface {
   is_continue: number
 }
 
+export interface HistroyInterface {
+  sid: number,
+  sim_name: string,
+  uid: string,
+  root_dir: string,
+  model_name: string,
+  gen_name: string,
+  status: number,
+  create_time: number
+  finish_time: number
+}
+
 export enum ParameterItemTypeEnum {
   Int = 'int',
   Float = 'float',
