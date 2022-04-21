@@ -1,13 +1,13 @@
 import { fabric } from 'fabric'
 import { GameSnapshotInterface } from '@/network/server'
 
-interface PositionInterface {
+export interface PositionInterface {
   top: number,
   left: number
 }
 
 // 路径接口
-interface PathInterface {
+export interface PathInterface {
   period: number,
   beginPeriod: number,
   beginNodeIndex: number,
@@ -21,7 +21,7 @@ export interface TimeConfigInterface {
 }
 
 // 中心时间控制
-class TimeControl {
+export class TimeControl {
   private mNowPeriod = 0
   private mMaxPeriod = 0
   private mLeftFrame = 0
@@ -108,7 +108,7 @@ export interface NodeConfigInterface {
   color: string
 }
 
-class Node {
+export class Node {
   private position: PositionInterface
   private nowReward = 0
   private rewards: number[] = []
@@ -182,7 +182,7 @@ export interface AgentConfigInterface {
   color: string
 }
 
-class Agent {
+export class Agent {
   private nowPosistion : PositionInterface = {
     top: 0,
     left: 0
@@ -319,13 +319,13 @@ export class GridDraw {
   private nodeConfig : NodeConfigInterface = {
     maxSize: 10,
     minSize: 2,
-    color: '#5470c6'
+    color: '#669900'
   }
 
   // 智能体配置
   private agentConfig : AgentConfigInterface = {
     size: 20,
-    color: '#73c0de',
+    color: '#000099',
     nodeMaxSize: this.nodeConfig.maxSize
   }
 

@@ -5,7 +5,7 @@
 </template>
 
 <script lang="ts">
-import { GridDraw } from '@/grid/grid'
+import { GridDraw } from '@/map/grid'
 import store, { GameSettingInterface, ModelSettingInterface } from '@/store/index'
 import { defineComponent } from 'vue'
 

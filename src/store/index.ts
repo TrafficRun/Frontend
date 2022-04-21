@@ -1,6 +1,6 @@
 import { createStore } from 'vuex'
 import { TrafficServer, GameSnapshotInterface, SettingReturnInterface } from '@/network/server'
-import { TimeConfigInterface, AgentConfigInterface, NodeConfigInterface } from '@/grid/grid'
+import { TimeConfigInterface, AgentConfigInterface, NodeConfigInterface } from '@/map/grid'
 
 export interface GameSettingInterface {
   timeConfig: TimeConfigInterface,

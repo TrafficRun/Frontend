@@ -52,7 +52,7 @@ export default defineComponent({
           type: 'scroll'
         },
         title: {
-          text: 'Server Ratio'
+          text: 'Server Num'
         },
         xAxis: {
           min: 0,

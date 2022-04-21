@@ -2,14 +2,19 @@
   <el-container>
     <el-header class="header-board">
       <el-row>
-        <el-col :span="23">
+        <el-col :span="22">
           <h3>Traffic Map</h3>
         </el-col>
-        <el-col :span="1">
+        <el-col :span="2">
           <h3>
             <el-button @click="drawer = true">
               <el-icon>
                 <Menu />
+              </el-icon>
+            </el-button>
+            <el-button>
+              <el-icon>
+                <Tickets />
               </el-icon>
             </el-button>
           </h3>
@@ -40,7 +45,7 @@ import RunModel from './components/RunModel.vue'
 import Setting from './components/Setting.vue'
 import { ElMessageBox } from 'element-plus'
 import store from '@/store/index'
-import { Menu } from '@element-plus/icons-vue'
+import { Menu, Tickets } from '@element-plus/icons-vue'
 
 interface ModelViewInterface {
   name: string
@@ -52,7 +57,8 @@ export default defineComponent({
     Display,
     Menu,
     Setting,
-    RunModel
+    RunModel,
+    Tickets
   },
   data () {
     return {
