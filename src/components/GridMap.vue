@@ -50,12 +50,12 @@ export default defineComponent({
     modelSetting () {
       return store.state.models[this.modelName]
     },
-    modelToken () {
-      return store.state.models[this.modelName].token
+    modelUid () {
+      return store.state.models[this.modelName].uid
     }
   },
   watch: {
-    modelToken (newVal : string) {
+    modelUid (newVal : string) {
       if (gridDraws[this.gridDrawIndex] !== null) {
         gridDraws[this.gridDrawIndex]!.stop()
       }

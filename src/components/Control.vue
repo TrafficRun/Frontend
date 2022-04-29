@@ -82,8 +82,8 @@ export default defineComponent({
     sumTimeStep () : number {
       return store.state.models[this.viewModelName].sumTimeStep
     },
-    token () : string {
-      return store.state.models[this.viewModelName].token
+    uid () : string {
+      return store.state.models[this.viewModelName].uid
     }
   },
   watch: {
@@ -172,7 +172,7 @@ export default defineComponent({
       })
     },
     requestResult () {
-      this.server!.getResult(this.token, this.requestTime).then((value) => {
+      this.server!.getResult(this.uid, this.requestTime).then((value) => {
         this.getResultRetry = 0
         if (value !== null) {
           this.requestTime += 1

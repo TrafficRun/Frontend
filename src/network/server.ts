@@ -70,7 +70,7 @@ export interface SettingReturnInterface {
   time_step: number,
   graph_type: string,
   agent_number: number,
-  token: string,
+  uid: string,
   graph: GraphGridInterface
 }
 
@@ -90,6 +90,7 @@ export interface ServerReturnType {
     | SettingReturnInterface
     | GameSnapshotInterface
     | VersionInterface
+    | HistroyInterface[]
 }
 
 export function getParameterDefaultValue (parameter: ParameterItemInterface) : any {
@@ -166,8 +167,8 @@ export class TrafficServer {
     return null
   }
 
-  public async getResult (token : string, timestep : number) : Promise<GameSnapshotInterface | null> {
-    const requestUrl = this.generateUri('simulate_result?time_step=' + timestep + '&token=' + token)
+  public async getResult (uid : string, timestep : number) : Promise<GameSnapshotInterface | null> {
+    const requestUrl = this.generateUri('simulate_result?time_step=' + timestep + '&uid=' + uid)
     const { data } = await axios.get(requestUrl)
     const sData = data as ServerReturnType
     if (sData.code === 0) {
@@ -183,6 +184,17 @@ export class TrafficServer {
     const sData = data as ServerReturnType
     if (sData.code === 0) {
       const result = sData.data as VersionInterface
+      return result
+    }
+    return null
+  }
+
+  public async getHistory () : Promise<null | HistroyInterface[]> {
+    const requestUrl = this.generateUri('history')
+    const { data } = await axios.get(requestUrl)
+    const sData = data as ServerReturnType
+    if (sData.code === 0) {
+      const result = sData.data as HistroyInterface[]
       return result
     }
     return null

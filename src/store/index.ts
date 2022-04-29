@@ -13,7 +13,7 @@ export interface ModelSettingInterface {
   sumTimeStep: number,
   agentNumber: number,
   graphType: string,
-  token: string,
+  uid: string,
   graph: {
     height: number,
     width: number
@@ -72,7 +72,7 @@ export default createStore({
         sumTimeStep: 24,
         agentNumber: 0,
         graphType: '',
-        token: '',
+        uid: '',
         graph: {
           height: 0,
           width: 0
@@ -86,7 +86,7 @@ export default createStore({
       state.models[modelName].graph = returnSetting.graph
       state.models[modelName].graphType = returnSetting.graph_type
       state.models[modelName].sumTimeStep = returnSetting.time_step
-      state.models[modelName].token = returnSetting.token
+      state.models[modelName].uid = returnSetting.uid
       if (state.models[modelName].sumTimeStep > state.maxTimeStep) {
         state.maxTimeStep = state.models[modelName].sumTimeStep
       }
