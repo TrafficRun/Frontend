@@ -26,7 +26,7 @@
     </el-collapse-item>
   </el-collapse>
   <el-divider></el-divider>
-  <el-button type="primary" @click="runTraffic" :loading="runButtonLoading" :disabled="formDisable">运行</el-button>
+  <el-button type="primary" @click="runTraffic" :loading="runButtonLoading" :disabled="formDisable">Running</el-button>
 </template>
 
 <script lang="ts">

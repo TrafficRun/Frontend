@@ -15,7 +15,7 @@
       border
     >
       <template #extra>
-        <el-button :disabled="history.status === 0"> 下载 </el-button>
+        <el-button :disabled="history.status === 0" @click="server.downloadLog(history.uid)"> Download </el-button>
       </template>
       <el-descriptions-item label="Sim Name">{{ history.sim_name }}</el-descriptions-item>
       <el-descriptions-item label="UID">{{ history.uid }}</el-descriptions-item>

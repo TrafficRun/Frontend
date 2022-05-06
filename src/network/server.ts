@@ -200,6 +200,11 @@ export class TrafficServer {
     return null
   }
 
+  public downloadLog (uid: string) {
+    const requestUrl = this.generateUri('get_log?uid=' + uid)
+    window.open(requestUrl)
+  }
+
   private generateUri (pUri :string) : string {
     return 'http://' + this.serverName + '/' + pUri
   }
